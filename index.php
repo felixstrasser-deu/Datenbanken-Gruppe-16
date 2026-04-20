@@ -16,6 +16,10 @@
         <button type = "submit" name = "submit">Login</button>
     </form>
 
+<?php
+    include 'login.php';
+?>
+
 
     <h1>Verwaltung von Radrennen</h1>
 
