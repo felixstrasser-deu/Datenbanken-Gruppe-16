@@ -14,9 +14,11 @@
     <input type="text"><br><br>
 
     <label>Passwort:</label><br>
-    <input type="password"><br><br>
-
+    <input type="password"placeholder = "Passwort"><br><br>
+    <div style="display: flex; gap: 10px;">
      <button type="submit">Login</button>
+     <button type="submit">Registrieren</button>
+</div>
 </form>
 </body>
 </html>
