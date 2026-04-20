@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -5,6 +7,15 @@
     <title>Verwaltung von Radrennen</title>
 </head>
 <body>
+
+#post ist nicht verschlüsselt und kann leicht gehackt werden
+    <form method ="post" action="db.php"> 
+        <h2>Login</h2>
+        <input type = "text" name = "username" placeholder="Loginnamen"><br><br>
+        <input type = "password" name = "password" placeholder="Passwort"><br><br>
+        <button type = "submit" name = "submit">Login</button>
+    </form>
+
 
     <h1>Verwaltung von Radrennen</h1>
 
