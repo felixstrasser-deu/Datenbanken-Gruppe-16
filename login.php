@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+</head>
 
-    <style>
-        body{
-            front-family: Arial;
-            background-colour: #f4f6f8;
+<body>
+    <h2>Login</h2>
 
-        }
+<form>
+    <label>Teamchef:</label><br>
+    <input type="text"><br><br>
 
-    login.box{
-        background: white;
-            padding: 30px;
-            border-radius: 10px;
-            width: 300px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
+    <label>Passwort:</label><br>
+    <input type="password"><br><br>
+
+     <button type="submit">Login</button>
+</form>
+</body>
+</html>
