@@ -9,18 +9,23 @@
 <body>
     <h2>Login</h2>
 
-<form>
-    <label>Teamchef:</label><br>
-    <input type="text"placeholder = "Loginname"><br><br>
+    <!-- LOGIN FORMULAR -->
+    <form>
+        <label>Teamchef:</label><br>
+        <input type="text" placeholder="Loginname"><br><br>
 
-    <label>Passwort:</label><br>
-    <input type="password"placeholder = "Passwort"><br><br>
-    <div style="display: flex; gap: 10px;">
- <form action="registrieren.php">
-     <button type="submit">Registrieren</button>
-</form>
-     <button type="submit">Login</button>
-</div>
-</form>
+        <label>Passwort:</label><br>
+        <input type="password" placeholder="Passwort"><br><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <br>
+
+    <!-- REGISTRIEREN BUTTON -->
+    <form action="registrieren.php">
+        <button type="submit">Registrieren</button>
+    </form>
+
 </body>
 </html>
