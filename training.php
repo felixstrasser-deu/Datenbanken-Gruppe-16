@@ -40,11 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     <br>
 
-    <label for="dauer">Dauer (in Minuten):</label>
-    <input type="number" id="dauer" name="dauer" required>
-    
-    <br>
-
     <label for="km">Kilometer:</label>
     <input type="number" id="km" name="km" required>
 
