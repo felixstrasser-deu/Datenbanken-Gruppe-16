@@ -1,26 +1,36 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-</head>
+<?php
+if (isset($_POST['login'])) {
 
-<body>
-    <div style="border: 1px solid black; padding: 15px; display: inline-block;">
-    <h2>Login</h2>
+    $anmeldename = $_POST['login_anmeldename'];
+    $passwort = $_POST['login_passwort'];
 
-<form>
-    <label>Teamchef:</label><br>
-    <input type="text"placeholder = "Loginname"><br><br>
+    $stmt = mysqli_prepare(
+        $connection,
+        "SELECT passwort FROM teamchef WHERE anmeldename = ?"
+    );
 
-    <label>Passwort:</label><br>
-    <input type="password"placeholder = "Passwort"><br><br>
-    <div style="display: flex; gap: 10px;">
+    mysqli_stmt_bind_param($stmt, "s", $anmeldename);
+    mysqli_stmt_execute($stmt);
 
-     <button type="submit">Login</button>
-</div>
+    $result = mysqli_stmt_get_result($stmt);
+    $row = mysqli_fetch_assoc($result);
+
+    if ($row && password_verify($passwort, $row['passwort'])) {
+        echo "<p>Login erfolgreich!</p>";
+    } else {
+        echo "<p>Login fehlgeschlagen!</p>";
+    }
+}
+?>
+
+<h2>Login</h2>
+
+<form method="POST">
+    Teamchef:<br>
+    <input type="text" name="login_anmeldename"><br><br>
+
+    Passwort:<br>
+    <input type="password" name="login_passwort"><br><br>
+
+    <button type="submit" name="login">Login</button>
 </form>
-</div>
-</body>
-</html>
