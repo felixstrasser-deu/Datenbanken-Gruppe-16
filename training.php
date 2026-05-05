@@ -15,58 +15,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($datum == '' || $kilometer == '' || $trainingsziel == '' || $mitarbeiter == '') {
         $fehler = 'Bitte alle Felder ausfüllen.';
     } elseif (!is_numeric($kilometer) || $kilometer <= 0) {
-        $fehler = 'Kilometer muss größer als 0 sein.';
+        $fehler = 'Kilometer muss groesser als 0 sein.';
     } elseif (!is_numeric($mitarbeiter)) {
         $fehler = 'Ungültiger Fahrer.';
-    } else {
-        $team = '';
-
-        $sql = 'SELECT Team FROM Fahrer WHERE Mitarbeiter_ID = ?';
-        $stmt = mysqli_prepare($connection, $sql);
-        mysqli_stmt_bind_param($stmt, 'i', $mitarbeiter);
-        mysqli_stmt_execute($stmt);
-        mysqli_stmt_bind_result($stmt, $team);
-        mysqli_stmt_fetch($stmt);
-        mysqli_stmt_close($stmt);
-
-        if ($team == '') {
-            $fehler = 'Fahrer wurde nicht gefunden.';
-        }
     }
 
     if ($fehler == '') {
-        $anzahl = 0;
-
-        $sql = 'SELECT COUNT(*) FROM Training WHERE Datum = ? AND Mitarbeiter = ?';
+        $sql = 'CALL TrainingSpeichern(?, ?, ?, ?, @status, @meldung)';
         $stmt = mysqli_prepare($connection, $sql);
-        mysqli_stmt_bind_param($stmt, 'si', $datum, $mitarbeiter);
-        mysqli_stmt_execute($stmt);
-        mysqli_stmt_bind_result($stmt, $anzahl);
-        mysqli_stmt_fetch($stmt);
-        mysqli_stmt_close($stmt);
 
-        if ($anzahl > 0) {
-            $fehler = 'Dieser Fahrer hat an diesem Tag schon ein Training.';
+        if ($stmt != false) {
+            mysqli_stmt_bind_param($stmt, 'sdsi', $datum, $kilometer, $trainingsziel, $mitarbeiter);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+
+            while (mysqli_more_results($connection)) {
+                mysqli_next_result($connection);
+            }
+
+            $result = mysqli_query($connection, 'SELECT @status AS status, @meldung AS meldung');
+            $row = mysqli_fetch_assoc($result);
+
+            if ($row['status'] == 'OK') {
+                $meldung = $row['meldung'];
+            } else {
+                $fehler = $row['meldung'];
+            }
         }
-    }
-
-    if ($fehler == '') {
-        $sql = 'INSERT INTO Training (Datum, Kilometer, Trainingsziel, Team, Mitarbeiter) VALUES (?, ?, ?, ?, ?)';
-        $stmt = mysqli_prepare($connection, $sql);
-        mysqli_stmt_bind_param($stmt, 'sdssi', $datum, $kilometer, $trainingsziel, $team, $mitarbeiter);
-
-        if (mysqli_stmt_execute($stmt)) {
-            $meldung = 'Training wurde gespeichert.';
-        } else {
-            $fehler = 'Training konnte nicht gespeichert werden.';
-        }
-
-        mysqli_stmt_close($stmt);
     }
 }
 
 $fahrer = mysqli_query($connection, 'SELECT Mitarbeiter_ID, Name, Team FROM Fahrer ORDER BY Name');
 $trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
+
+if ($fahrer == false || $trainingsziele == false) {
+    $fehler = 'Daten konnten nicht geladen werden: ' . mysqli_error($connection);
+}
 ?>
 
 <!DOCTYPE html>
@@ -90,11 +74,13 @@ $trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainings
 <form method="post" action="training.php">
     <label for="mitarbeiter">Fahrer:</label><br>
     <select name="mitarbeiter" id="mitarbeiter" required>
-        <option value="">Bitte wählen</option>
-        <?php while ($row = mysqli_fetch_assoc($fahrer)) { ?>
-            <option value="<?php echo htmlspecialchars($row['Mitarbeiter_ID']); ?>">
-                <?php echo htmlspecialchars($row['Mitarbeiter_ID'] . ' - ' . $row['Name'] . ' (' . $row['Team'] . ')'); ?>
-            </option>
+        <option value="">Bitte waehlen</option>
+        <?php if ($fahrer != false) { ?>
+            <?php while ($row = mysqli_fetch_assoc($fahrer)) { ?>
+                <option value="<?php echo htmlspecialchars($row['Mitarbeiter_ID']); ?>">
+                    <?php echo htmlspecialchars($row['Mitarbeiter_ID'] . ' - ' . $row['Name'] . ' (' . $row['Team'] . ')'); ?>
+                </option>
+            <?php } ?>
         <?php } ?>
     </select>
 
@@ -113,10 +99,12 @@ $trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainings
     <label for="trainingsziel">Trainingsziel:</label><br>
     <select name="trainingsziel" id="trainingsziel" required>
         <option value="">Bitte wählen</option>
-        <?php while ($row = mysqli_fetch_assoc($trainingsziele)) { ?>
-            <option value="<?php echo htmlspecialchars($row['Trainingsziel']); ?>">
-                <?php echo htmlspecialchars($row['Trainingsziel']); ?>
-            </option>
+        <?php if ($trainingsziele != false) { ?>
+            <?php while ($row = mysqli_fetch_assoc($trainingsziele)) { ?>
+                <option value="<?php echo htmlspecialchars($row['Trainingsziel']); ?>">
+                    <?php echo htmlspecialchars($row['Trainingsziel']); ?>
+                </option>
+            <?php } ?>
         <?php } ?>
     </select>
 
