@@ -1,12 +1,27 @@
 <?php
+session_start();
 include 'db.php';
 
 mysqli_set_charset($connection, 'utf8mb4');
+
+if (isset($_SESSION['rolle'])) {
+    if ($_SESSION['rolle'] === 'teamchef') {
+        header('Location: teamchef_dashboard.php');
+        exit;
+    }
+
+    if ($_SESSION['rolle'] === 'veranstalter') {
+        header('Location: veranstalter_dashboard.php');
+        exit;
+    }
+}
 
 $anzahlTeams = 0;
 $anzahlFahrer = 0;
 $anzahlRennen = 0;
 $anzahlTrainings = 0;
+$loginStatus = trim($_GET['login'] ?? '');
+$regStatus = trim($_GET['reg'] ?? '');
 $regMeldung = '';
 $regFehler = '';
 $regLoginname = trim($_POST['loginname'] ?? '');
@@ -18,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_typ'] ?? '') === 'tea
     $regKennwort = trim($_POST['kennwort'] ?? '');
 
     if ($regLoginname === '' || $regName === '' || $regVorname === '' || $regTeam === '' || $regKennwort === '') {
-        $regFehler = 'Bitte alle Felder ausfuellen.';
+        $regFehler = 'Bitte alle Felder ausfüllen.';
     } else {
         $checkSql = 'SELECT 1 FROM Teamchef WHERE Team = ? LIMIT 1';
         $checkStmt = mysqli_prepare($connection, $checkSql);
@@ -34,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_typ'] ?? '') === 'tea
 
             mysqli_stmt_close($checkStmt);
         } else {
-            $regFehler = 'Fehler bei der Teamchef-Pruefung.';
+            $regFehler = 'Fehler bei der Teamchef-Prüfung.';
         }
 
         if ($regFehler === '') {
@@ -105,6 +120,18 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
 
 <h1>Verwaltung von Radrennen</h1>
 
+<?php if ($loginStatus === 'ok') { ?>
+    <p style="color: green;">Login erfolgreich.</p>
+<?php } elseif ($loginStatus === 'fehler') { ?>
+    <p style="color: red;">Login fehlgeschlagen.</p>
+<?php } ?>
+
+<?php if ($regStatus === 'exists') { ?>
+    <p style="color: red;">Veranstalter existiert bereits.</p>
+<?php } elseif ($regStatus === 'fehler') { ?>
+    <p style="color: red;">Veranstalter-Registrierung fehlgeschlagen.</p>
+<?php } ?>
+
 <h2>Login und Registrierung</h2>
 
 <table border="1" cellpadding="10" cellspacing="0">
@@ -157,7 +184,7 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
 
                 <label for="reg_team">Team:</label><br>
                 <select name="team" id="reg_team" required>
-                    <option value="">Bitte waehlen</option>
+                    <option value="">Bitte wählen</option>
                     <?php while ($row = mysqli_fetch_assoc($teams)) { ?>
                         <option value="<?php echo htmlspecialchars($row['Teamname'], ENT_QUOTES, 'UTF-8'); ?>" <?php if ($regTeam === $row['Teamname']) echo 'selected'; ?>>
                             <?php echo htmlspecialchars($row['Teamname']); ?>
@@ -192,7 +219,7 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
 
                 <br><br>
 
-                <button type="submit" style="background-color: pink;">Veranstalter Login</button>
+                <button type="submit">Veranstalter Login</button>
             </form>
         </td>
 

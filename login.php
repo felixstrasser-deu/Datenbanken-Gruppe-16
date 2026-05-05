@@ -1,36 +1,61 @@
 <?php
-if (isset($_POST['login'])) {
+session_start();
+require 'db.php';
 
-    $anmeldename = $_POST['login_anmeldename'];
-    $passwort = $_POST['login_passwort'];
+mysqli_set_charset($connection, 'utf8mb4');
 
-    $stmt = mysqli_prepare(
-        $connection,
-        "SELECT passwort FROM teamchef WHERE anmeldename = ?"
-    );
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
+}
 
-    mysqli_stmt_bind_param($stmt, "s", $anmeldename);
-    mysqli_stmt_execute($stmt);
+$loginname = trim($_POST['loginname'] ?? '');
+$kennwort = trim($_POST['kennwort'] ?? '');
 
-    $result = mysqli_stmt_get_result($stmt);
-    $row = mysqli_fetch_assoc($result);
+if ($loginname === '' || $kennwort === '') {
+    header('Location: index.php?login=fehler');
+    exit;
+}
 
-    if ($row && password_verify($passwort, $row['passwort'])) {
-        echo "<p>Login erfolgreich!</p>";
-    } else {
-        echo "<p>Login fehlgeschlagen!</p>";
+$sql = 'SELECT Loginname, Kennwort, Team FROM Teamchef WHERE Loginname = ? LIMIT 1';
+$stmt = mysqli_prepare($connection, $sql);
+
+if (!$stmt) {
+    header('Location: index.php?login=fehler');
+    exit;
+}
+
+mysqli_stmt_bind_param($stmt, 's', $loginname);
+mysqli_stmt_execute($stmt);
+mysqli_stmt_bind_result($stmt, $dbLoginname, $dbKennwort, $dbTeam);
+$found = mysqli_stmt_fetch($stmt);
+mysqli_stmt_close($stmt);
+
+if (!$found) {
+    header('Location: index.php?login=fehler');
+    exit;
+}
+
+$passwortKorrekt = password_verify($kennwort, $dbKennwort) || hash_equals($dbKennwort, $kennwort);
+
+if (!$passwortKorrekt) {
+    header('Location: index.php?login=fehler');
+    exit;
+}
+
+$_SESSION['rolle'] = 'teamchef';
+$_SESSION['loginname'] = $dbLoginname;
+$_SESSION['team'] = $dbTeam;
+
+if (!password_verify($kennwort, $dbKennwort)) {
+    $hash = password_hash($kennwort, PASSWORD_DEFAULT);
+    $update = mysqli_prepare($connection, 'UPDATE Teamchef SET Kennwort = ? WHERE Loginname = ?');
+    if ($update) {
+        mysqli_stmt_bind_param($update, 'ss', $hash, $dbLoginname);
+        mysqli_stmt_execute($update);
+        mysqli_stmt_close($update);
     }
 }
-?>
 
-<h2>Login</h2>
-
-<form method="POST">
-    Teamchef:<br>
-    <input type="text" name="login_anmeldename"><br><br>
-
-    Passwort:<br>
-    <input type="password" name="login_passwort"><br><br>
-
-    <button type="submit" name="login">Login</button>
-</form>
+header('Location: teamchef_dashboard.php');
+exit;
