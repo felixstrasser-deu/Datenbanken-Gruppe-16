@@ -1,6 +1,112 @@
 <?php
+/*
+ * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Startseite mit Registrierung, Login und Übersicht.
+ */
 session_start();
 include 'db.php';
+
+if (file_exists('functions.php')) {
+    require_once 'functions.php';
+}
+
+if (!function_exists('e')) {
+    function e($value)
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('post_value')) {
+    function post_value($key)
+    {
+        return trim((string) ($_POST[$key] ?? ''));
+    }
+}
+
+if (!function_exists('get_value')) {
+    function get_value($key)
+    {
+        return trim((string) ($_GET[$key] ?? ''));
+    }
+}
+
+if (!function_exists('team_exists')) {
+    function team_exists($connection, $teamname)
+    {
+        $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Team WHERE Teamname = ? LIMIT 1');
+        if (!$stmt) {
+            return false;
+        }
+
+        mysqli_stmt_bind_param($stmt, 's', $teamname);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_store_result($stmt);
+        $exists = mysqli_stmt_num_rows($stmt) > 0;
+        mysqli_stmt_close($stmt);
+
+        return $exists;
+    }
+}
+
+if (!function_exists('loginname_exists')) {
+    function loginname_exists($connection, $loginname)
+    {
+        $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Teamchef WHERE Loginname = ? LIMIT 1');
+        if (!$stmt) {
+            return false;
+        }
+
+        mysqli_stmt_bind_param($stmt, 's', $loginname);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_store_result($stmt);
+        $exists = mysqli_stmt_num_rows($stmt) > 0;
+        mysqli_stmt_close($stmt);
+
+        return $exists;
+    }
+}
+
+if (!function_exists('create_team_with_chef')) {
+    function create_team_with_chef($connection, $teamname, $loginname, $name, $vorname, $kennwort)
+    {
+        mysqli_begin_transaction($connection);
+
+        $teamStmt = mysqli_prepare($connection, 'INSERT INTO Team (Teamname) VALUES (?)');
+        if (!$teamStmt) {
+            mysqli_rollback($connection);
+            return false;
+        }
+
+        mysqli_stmt_bind_param($teamStmt, 's', $teamname);
+        $teamOk = mysqli_stmt_execute($teamStmt);
+        mysqli_stmt_close($teamStmt);
+
+        if (!$teamOk) {
+            mysqli_rollback($connection);
+            return false;
+        }
+
+        $hash = password_hash($kennwort, PASSWORD_DEFAULT);
+        $chefStmt = mysqli_prepare($connection, 'INSERT INTO Teamchef (Loginname, Name, Vorname, Kennwort, Team) VALUES (?, ?, ?, ?, ?)');
+        if (!$chefStmt) {
+            mysqli_rollback($connection);
+            return false;
+        }
+
+        mysqli_stmt_bind_param($chefStmt, 'sssss', $loginname, $name, $vorname, $hash, $teamname);
+        $chefOk = mysqli_stmt_execute($chefStmt);
+        mysqli_stmt_close($chefStmt);
+
+        if (!$chefOk) {
+            mysqli_rollback($connection);
+            return false;
+        }
+
+        mysqli_commit($connection);
+        return true;
+    }
+}
 
 mysqli_set_charset($connection, 'utf8mb4');
 
@@ -20,81 +126,55 @@ $anzahlTeams = 0;
 $anzahlFahrer = 0;
 $anzahlRennen = 0;
 $anzahlTrainings = 0;
-$loginStatus = trim($_GET['login'] ?? '');
-$regStatus = trim($_GET['reg'] ?? '');
+$loginStatus = get_value('login');
+$regStatus = get_value('reg');
 $regMeldung = '';
 $regFehler = '';
-$regLoginname = trim($_POST['loginname'] ?? '');
-$regName = trim($_POST['name'] ?? '');
-$regVorname = trim($_POST['vorname'] ?? '');
-$regTeam = trim($_POST['team'] ?? '');
+$regLoginname = post_value('loginname');
+$regName = post_value('name');
+$regVorname = post_value('vorname');
+$regTeam = post_value('teamname');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_typ'] ?? '') === 'teamchef_reg') {
-    $regKennwort = trim($_POST['kennwort'] ?? '');
+    $regKennwort = post_value('kennwort');
 
     if ($regLoginname === '' || $regName === '' || $regVorname === '' || $regTeam === '' || $regKennwort === '') {
         $regFehler = 'Bitte alle Felder ausfüllen.';
+    } elseif (strlen($regLoginname) > 46 || strlen($regName) > 46 || strlen($regVorname) > 46 || strlen($regTeam) > 46) {
+        $regFehler = 'Textfelder dürfen maximal 46 Zeichen lang sein.';
+    } elseif (team_exists($connection, $regTeam)) {
+        $regFehler = 'Dieses Team existiert bereits.';
+    } elseif (loginname_exists($connection, $regLoginname)) {
+        $regFehler = 'Dieser Loginname existiert bereits.';
+    } elseif (create_team_with_chef($connection, $regTeam, $regLoginname, $regName, $regVorname, $regKennwort)) {
+        $_SESSION['rolle'] = 'teamchef';
+        $_SESSION['loginname'] = $regLoginname;
+        $_SESSION['team'] = $regTeam;
+
+        header('Location: teamchef_dashboard.php');
+        exit;
     } else {
-        $checkSql = 'SELECT 1 FROM Teamchef WHERE Team = ? LIMIT 1';
-        $checkStmt = mysqli_prepare($connection, $checkSql);
-
-        if ($checkStmt) {
-            mysqli_stmt_bind_param($checkStmt, 's', $regTeam);
-            mysqli_stmt_execute($checkStmt);
-            mysqli_stmt_store_result($checkStmt);
-
-            if (mysqli_stmt_num_rows($checkStmt) > 0) {
-                $regFehler = 'Dieses Team hat bereits einen Teamchef.';
-            }
-
-            mysqli_stmt_close($checkStmt);
-        } else {
-            $regFehler = 'Fehler bei der Teamchef-Prüfung.';
-        }
-
-        if ($regFehler === '') {
-            $hash = password_hash($regKennwort, PASSWORD_DEFAULT);
-            $sql = 'INSERT INTO Teamchef (Loginname, Name, Vorname, Kennwort, Team) VALUES (?, ?, ?, ?, ?)';
-            $stmt = mysqli_prepare($connection, $sql);
-
-            if ($stmt) {
-                mysqli_stmt_bind_param($stmt, 'sssss', $regLoginname, $regName, $regVorname, $hash, $regTeam);
-
-                if (mysqli_stmt_execute($stmt)) {
-                    $regMeldung = 'Registrierung erfolgreich.';
-                    $regLoginname = '';
-                    $regName = '';
-                    $regVorname = '';
-                    $regTeam = '';
-                } else {
-                    $regFehler = 'Fehler beim Speichern: ' . mysqli_error($connection);
-                }
-
-                mysqli_stmt_close($stmt);
-            } else {
-                $regFehler = 'Fehler beim Vorbereiten der SQL-Anweisung.';
-            }
-        }
+        $regFehler = 'Fehler beim Speichern: ' . mysqli_error($connection);
     }
 }
 
 $result = mysqli_query($connection, 'SELECT COUNT(*) AS anzahl FROM Team');
-if ($row = mysqli_fetch_assoc($result)) {
+if ($result && ($row = mysqli_fetch_assoc($result))) {
     $anzahlTeams = $row['anzahl'];
 }
 
 $result = mysqli_query($connection, 'SELECT COUNT(*) AS anzahl FROM Fahrer');
-if ($row = mysqli_fetch_assoc($result)) {
+if ($result && ($row = mysqli_fetch_assoc($result))) {
     $anzahlFahrer = $row['anzahl'];
 }
 
 $result = mysqli_query($connection, 'SELECT COUNT(*) AS anzahl FROM Radrennen');
-if ($row = mysqli_fetch_assoc($result)) {
+if ($result && ($row = mysqli_fetch_assoc($result))) {
     $anzahlRennen = $row['anzahl'];
 }
 
 $result = mysqli_query($connection, 'SELECT COUNT(*) AS anzahl FROM Training');
-if ($row = mysqli_fetch_assoc($result)) {
+if ($result && ($row = mysqli_fetch_assoc($result))) {
     $anzahlTrainings = $row['anzahl'];
 }
 
@@ -106,8 +186,6 @@ $letzteTrainings = mysqli_query(
      ORDER BY Training.Datum DESC
      LIMIT 5'
 );
-
-$teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname');
 ?>
 
 <!DOCTYPE html>
@@ -119,27 +197,33 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
 <body>
 
 <h1>Verwaltung von Radrennen</h1>
+<p>Bitte melden Sie sich als Teamchef oder Rennveranstalter an. Neue Teams und neue Rennveranstalter können direkt auf dieser Seite registriert werden.</p>
 
 <?php if ($loginStatus === 'ok') { ?>
-    <p style="color: green;">Login erfolgreich.</p>
+    <p><strong>Login erfolgreich.</strong></p>
 <?php } elseif ($loginStatus === 'fehler') { ?>
-    <p style="color: red;">Login fehlgeschlagen.</p>
+    <p><strong>Login fehlgeschlagen.</strong></p>
 <?php } ?>
 
 <?php if ($regStatus === 'exists') { ?>
-    <p style="color: red;">Veranstalter existiert bereits.</p>
+    <p><strong>Veranstalter existiert bereits.</strong></p>
 <?php } elseif ($regStatus === 'fehler') { ?>
-    <p style="color: red;">Veranstalter-Registrierung fehlgeschlagen.</p>
+    <p><strong>Veranstalter-Registrierung fehlgeschlagen.</strong></p>
 <?php } ?>
 
-<h2>Login und Registrierung</h2>
+<hr>
 
-<table border="1" cellpadding="10" cellspacing="0">
+<h2>Teamchef-Bereich</h2>
+
+<table border="1" cellpadding="12" cellspacing="0" width="100%">
     <tr>
-        <td>
-            <h3>Teamchef Login</h3>
+        <th align="left">Teamchef Login</th>
+        <th align="left">Teamchef Registrierung</th>
+    </tr>
+    <tr>
+        <td valign="top" width="50%">
 
-            <form method="post" action="login.php">
+            <form method="post" action="login_teamchef.php">
                 <label for="teamchef_login">Loginname:</label><br>
                 <input type="text" name="loginname" id="teamchef_login" required>
 
@@ -154,43 +238,35 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
             </form>
         </td>
 
-        <td>
-            <h3>Teamchef Registrierung</h3>
-
+        <td valign="top" width="50%">
             <?php if ($regMeldung !== '') { ?>
-                <p style="color: green;"><?php echo htmlspecialchars($regMeldung, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p><strong><?php echo e($regMeldung); ?></strong></p>
             <?php } ?>
 
             <?php if ($regFehler !== '') { ?>
-                <p style="color: red;"><?php echo htmlspecialchars($regFehler, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p><strong><?php echo e($regFehler); ?></strong></p>
             <?php } ?>
 
             <form method="post" action="index.php">
                 <input type="hidden" name="form_typ" value="teamchef_reg">
+
+                <label for="reg_team">Teamname:</label><br>
+                <input type="text" name="teamname" id="reg_team" maxlength="46" value="<?php echo e($regTeam); ?>" required>
+
+                <br><br>
+
                 <label for="reg_loginname">Loginname:</label><br>
-                <input type="text" name="loginname" id="reg_loginname" value="<?php echo htmlspecialchars($regLoginname, ENT_QUOTES, 'UTF-8'); ?>" required>
+                <input type="text" name="loginname" id="reg_loginname" maxlength="46" value="<?php echo e($regLoginname); ?>" required>
 
                 <br><br>
 
                 <label for="reg_name">Name:</label><br>
-                <input type="text" name="name" id="reg_name" value="<?php echo htmlspecialchars($regName, ENT_QUOTES, 'UTF-8'); ?>" required>
+                <input type="text" name="name" id="reg_name" maxlength="46" value="<?php echo e($regName); ?>" required>
 
                 <br><br>
 
                 <label for="reg_vorname">Vorname:</label><br>
-                <input type="text" name="vorname" id="reg_vorname" value="<?php echo htmlspecialchars($regVorname, ENT_QUOTES, 'UTF-8'); ?>" required>
-
-                <br><br>
-
-                <label for="reg_team">Team:</label><br>
-                <select name="team" id="reg_team" required>
-                    <option value="">Bitte wählen</option>
-                    <?php while ($row = mysqli_fetch_assoc($teams)) { ?>
-                        <option value="<?php echo htmlspecialchars($row['Teamname'], ENT_QUOTES, 'UTF-8'); ?>" <?php if ($regTeam === $row['Teamname']) echo 'selected'; ?>>
-                            <?php echo htmlspecialchars($row['Teamname']); ?>
-                        </option>
-                    <?php } ?>
-                </select>
+                <input type="text" name="vorname" id="reg_vorname" maxlength="46" value="<?php echo e($regVorname); ?>" required>
 
                 <br><br>
 
@@ -203,11 +279,19 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
             </form>
         </td>
     </tr>
+</table>
 
+<br>
+
+<h2>Rennveranstalter-Bereich</h2>
+
+<table border="1" cellpadding="12" cellspacing="0" width="100%">
     <tr>
-        <td>
-            <h3>Veranstalter Login</h3>
-
+        <th align="left">Veranstalter Login</th>
+        <th align="left">Veranstalter Registrierung</th>
+    </tr>
+    <tr>
+        <td valign="top" width="50%">
             <form method="post" action="veranstalter_login.php">
                 <label for="veranstalter_name">Name:</label><br>
                 <input type="text" name="name" id="veranstalter_name" required>
@@ -223,9 +307,7 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
             </form>
         </td>
 
-        <td>
-            <h3>Veranstalter Registrierung</h3>
-
+        <td valign="top" width="50%">
             <form method="post" action="veranstalter_registrieren.php">
                 <label for="veranstalter_reg_name">Name:</label><br>
                 <input type="text" name="name" id="veranstalter_reg_name" required>
@@ -243,9 +325,11 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
     </tr>
 </table>
 
+<hr>
+
 <h2>Übersicht</h2>
 
-<table border="1" cellpadding="5" cellspacing="0">
+<table border="1" cellpadding="8" cellspacing="0">
     <tr>
         <th>Teams</th>
         <th>Fahrer</th>
@@ -253,19 +337,21 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
         <th>Trainings</th>
     </tr>
     <tr>
-        <td><?php echo htmlspecialchars($anzahlTeams); ?></td>
-        <td><?php echo htmlspecialchars($anzahlFahrer); ?></td>
-        <td><?php echo htmlspecialchars($anzahlRennen); ?></td>
-        <td><?php echo htmlspecialchars($anzahlTrainings); ?></td>
+        <td><?php echo e($anzahlTeams); ?></td>
+        <td><?php echo e($anzahlFahrer); ?></td>
+        <td><?php echo e($anzahlRennen); ?></td>
+        <td><?php echo e($anzahlTrainings); ?></td>
     </tr>
 </table>
 
+<br>
+
 <h2>Letzte Trainings</h2>
 
-<?php if (mysqli_num_rows($letzteTrainings) == 0) { ?>
+<?php if (!$letzteTrainings || mysqli_num_rows($letzteTrainings) == 0) { ?>
     <p>Noch keine Trainings vorhanden.</p>
 <?php } else { ?>
-    <table border="1" cellpadding="5" cellspacing="0">
+    <table border="1" cellpadding="8" cellspacing="0" width="100%">
         <tr>
             <th>Datum</th>
             <th>Fahrer</th>
@@ -275,36 +361,14 @@ $teams = mysqli_query($connection, 'SELECT Teamname FROM Team ORDER BY Teamname'
 
         <?php while ($row = mysqli_fetch_assoc($letzteTrainings)) { ?>
             <tr>
-                <td><?php echo htmlspecialchars($row['Datum']); ?></td>
-                <td><?php echo htmlspecialchars($row['Name']); ?></td>
-                <td><?php echo htmlspecialchars($row['Kilometer']); ?></td>
-                <td><?php echo htmlspecialchars($row['Trainingsziel']); ?></td>
+                <td><?php echo e($row['Datum']); ?></td>
+                <td><?php echo e($row['Name']); ?></td>
+                <td><?php echo e($row['Kilometer']); ?></td>
+                <td><?php echo e($row['Trainingsziel']); ?></td>
             </tr>
         <?php } ?>
     </table>
 <?php } ?>
-
-<h2>Bearbeiten</h2>
-
-<h3>Team und Fahrer</h3>
-<ul>
-    <li><a href="team.php">Team verwalten</a></li>
-    <li><a href="fahrer.php">Fahrer verwalten</a></li>
-</ul>
-
-<h3>Rennen und Anmeldung</h3>
-<ul>
-    <li><a href="rennen.php">Rennen verwalten</a></li>
-    <li><a href="anmeldung.php">Anmeldung</a></li>
-    <li><a href="kopieren.php">Anmeldung kopieren</a></li>
-</ul>
-
-<h3>Training, Ergebnisse und Auswertung</h3>
-<ul>
-    <li><a href="training.php">Training erfassen</a></li>
-    <li><a href="ergebnisse.php">Ergebnisse erfassen</a></li>
-    <li><a href="auswertung.php">Auswertung anzeigen</a></li>
-</ul>
 
 </body>
 </html>

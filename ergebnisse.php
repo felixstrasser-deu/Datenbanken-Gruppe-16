@@ -1,54 +1,158 @@
 <?php
-include 'db.php';
+/*
+ * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Einmalige Ergebniserfassung für Rennen eines Veranstalters.
+ */
+session_start();
+require 'db.php';
+require 'functions.php';
 
+require_role('veranstalter');
 mysqli_set_charset($connection, 'utf8mb4');
 
+$veranstalter = (string) ($_SESSION['name'] ?? '');
 $meldung = '';
-$rennen = '';
+$fehler = '';
+$rennen = post_value('rennen') !== '' ? post_value('rennen') : get_value('rennen');
 
-if (isset($_POST['rennen'])) {
-    $rennen = $_POST['rennen'];
-} elseif (isset($_GET['rennen'])) {
-    $rennen = $_GET['rennen'];
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['speichern'])) {
+    $rennenId = filter_var($rennen, FILTER_VALIDATE_INT);
+    $startnummern = $_POST['startnummer'] ?? array();
+    $platzierungen = $_POST['platzierung'] ?? array();
+    $fahrtzeiten = $_POST['fahrtzeit'] ?? array();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['speichern'])) {
-    foreach ($_POST['startnummer'] as $i => $startnummer) {
-        $platzierung = $_POST['platzierung'][$i];
-        $fahrtzeit = $_POST['fahrtzeit'][$i];
+    if ($rennenId === false || $rennenId <= 0) {
+        $fehler = 'Bitte ein gültiges Rennen auswählen.';
+    } else {
+        $resultCheck = mysqli_prepare($connection, 'SELECT COUNT(*) FROM Anmeldung INNER JOIN Radrennen ON Anmeldung.Radrennen = Radrennen.`Renn-ID` WHERE Anmeldung.Radrennen = ? AND Radrennen.VName = ? AND (Anmeldung.Platzierung <> 0 OR Anmeldung.Fahrtzeit <> 0)');
+        if ($resultCheck) {
+            mysqli_stmt_bind_param($resultCheck, 'is', $rennenId, $veranstalter);
+            mysqli_stmt_execute($resultCheck);
+            mysqli_stmt_bind_result($resultCheck, $vorhandeneErgebnisse);
+            mysqli_stmt_fetch($resultCheck);
+            mysqli_stmt_close($resultCheck);
 
-        if ($platzierung != '' && $fahrtzeit != '') {
-            $sql = 'UPDATE Anmeldung
-                    SET Platzierung = ?, Fahrtzeit = ?
-                    WHERE Startnummer = ?
-                    AND Platzierung = 0
-                    AND Fahrtzeit = 0';
-
-            $stmt = mysqli_prepare($connection, $sql);
-            mysqli_stmt_bind_param($stmt, 'iii', $platzierung, $fahrtzeit, $startnummer);
-            mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
+            if ($vorhandeneErgebnisse > 0) {
+                $fehler = 'Ergebnisse für dieses Rennen wurden bereits erfasst und können nicht geändert werden.';
+            }
+        } else {
+            $fehler = 'Ergebnispruefung konnte nicht vorbereitet werden.';
         }
     }
 
-    $meldung = 'Ergebnisse wurden gespeichert. Bereits vorhandene Ergebnisse wurden nicht geaendert.';
+    $vergebenePlaetze = array();
+    if ($fehler === '') {
+        foreach ($startnummern as $i => $startnummer) {
+            $platzierung = filter_var($platzierungen[$i] ?? '', FILTER_VALIDATE_INT);
+            $fahrtzeit = filter_var($fahrtzeiten[$i] ?? '', FILTER_VALIDATE_INT);
+
+            if ($platzierung === false || $fahrtzeit === false || $platzierung <= 0 || $fahrtzeit <= 0) {
+                $fehler = 'Bitte für jeden Fahrer Platzierung und Fahrtzeit gültig eintragen.';
+                break;
+            }
+
+            if (isset($vergebenePlaetze[$platzierung])) {
+                $fehler = 'Jede Platzierung darf pro Rennen nur einmal vergeben werden.';
+                break;
+            }
+
+            $vergebenePlaetze[$platzierung] = true;
+        }
+    }
+
+    if ($fehler === '') {
+        mysqli_begin_transaction($connection);
+        $ok = true;
+
+        foreach ($startnummern as $i => $startnummerRaw) {
+            $startnummer = filter_var($startnummerRaw, FILTER_VALIDATE_INT);
+            $platzierung = filter_var($platzierungen[$i], FILTER_VALIDATE_INT);
+            $fahrtzeit = filter_var($fahrtzeiten[$i], FILTER_VALIDATE_INT);
+
+            $sql = 'UPDATE Anmeldung
+                    INNER JOIN Radrennen ON Anmeldung.Radrennen = Radrennen.`Renn-ID`
+                    SET Anmeldung.Platzierung = ?, Anmeldung.Fahrtzeit = ?
+                    WHERE Anmeldung.Radrennen = ?
+                    AND Anmeldung.Startnummer = ?
+                    AND Radrennen.VName = ?
+                    AND Anmeldung.Platzierung = 0
+                    AND Anmeldung.Fahrtzeit = 0';
+
+            $stmt = mysqli_prepare($connection, $sql);
+            if (!$stmt) {
+                $ok = false;
+                break;
+            }
+
+            mysqli_stmt_bind_param($stmt, 'iiiis', $platzierung, $fahrtzeit, $rennenId, $startnummer, $veranstalter);
+            $ok = mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+
+            if (!$ok) {
+                break;
+            }
+        }
+
+        if ($ok) {
+            mysqli_commit($connection);
+            $meldung = 'Ergebnisse wurden gespeichert.';
+        } else {
+            mysqli_rollback($connection);
+            $fehler = 'Ergebnisse konnten nicht gespeichert werden: ' . mysqli_error($connection);
+        }
+    }
 }
 
-$rennenListe = mysqli_query($connection, 'SELECT `Renn-ID`, Datum, Standort FROM Radrennen ORDER BY Datum DESC');
-$anmeldungen = false;
+$rennenListeStmt = mysqli_prepare($connection, 'SELECT `Renn-ID`, Datum, Standort FROM Radrennen WHERE VName = ? ORDER BY Datum DESC, `Renn-ID` DESC');
+$rennenListe = array();
+if ($rennenListeStmt) {
+    mysqli_stmt_bind_param($rennenListeStmt, 's', $veranstalter);
+    mysqli_stmt_execute($rennenListeStmt);
+    mysqli_stmt_bind_result($rennenListeStmt, $rennenId, $datum, $standort);
 
-if ($rennen != '') {
-    $rennenNummer = (int) $rennen;
+    while (mysqli_stmt_fetch($rennenListeStmt)) {
+        $rennenListe[] = array('Renn-ID' => $rennenId, 'Datum' => $datum, 'Standort' => $standort);
+    }
 
-    $anmeldungen = mysqli_query(
-        $connection,
-        'SELECT Anmeldung.Startnummer, Anmeldung.Platzierung, Anmeldung.Fahrtzeit,
-                Fahrer.Mitarbeiter_ID, Fahrer.Name, Fahrer.Team
-         FROM Anmeldung
-         INNER JOIN Fahrer ON Anmeldung.Mitarbeiter = Fahrer.Mitarbeiter_ID
-         WHERE Anmeldung.Radrennen = ' . $rennenNummer . '
-         ORDER BY Anmeldung.Startnummer'
-    );
+    mysqli_stmt_close($rennenListeStmt);
+}
+
+$anmeldungen = array();
+if ($rennen !== '') {
+    $rennenNummer = filter_var($rennen, FILTER_VALIDATE_INT);
+
+    if ($rennenNummer !== false && $rennenNummer > 0) {
+        $stmt = mysqli_prepare(
+            $connection,
+            'SELECT Anmeldung.Startnummer, Anmeldung.Platzierung, Anmeldung.Fahrtzeit,
+                    Fahrer.Mitarbeiter_ID, Fahrer.Name, Fahrer.Team
+             FROM Anmeldung
+             INNER JOIN Fahrer ON Anmeldung.Mitarbeiter = Fahrer.Mitarbeiter_ID
+             INNER JOIN Radrennen ON Anmeldung.Radrennen = Radrennen.`Renn-ID`
+             WHERE Anmeldung.Radrennen = ?
+             AND Radrennen.VName = ?
+             ORDER BY Anmeldung.Startnummer'
+        );
+
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 'is', $rennenNummer, $veranstalter);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_bind_result($stmt, $startnummer, $platzierung, $fahrtzeit, $mitarbeiterId, $fahrerName, $team);
+
+            while (mysqli_stmt_fetch($stmt)) {
+                $anmeldungen[] = array(
+                    'Startnummer' => $startnummer,
+                    'Platzierung' => $platzierung,
+                    'Fahrtzeit' => $fahrtzeit,
+                    'Mitarbeiter_ID' => $mitarbeiterId,
+                    'Name' => $fahrerName,
+                    'Team' => $team,
+                );
+            }
+
+            mysqli_stmt_close($stmt);
+        }
+    }
 }
 ?>
 
@@ -62,17 +166,20 @@ if ($rennen != '') {
 
 <h2>Ergebnisse erfassen</h2>
 
-<?php if ($meldung != '') { ?>
-    <p style="color: green;"><?php echo htmlspecialchars($meldung); ?></p>
+<?php if ($meldung !== '') { ?>
+    <p style="color: green;"><?php echo e($meldung); ?></p>
+<?php } ?>
+<?php if ($fehler !== '') { ?>
+    <p style="color: red;"><?php echo e($fehler); ?></p>
 <?php } ?>
 
 <form method="get" action="ergebnisse.php">
     <label for="rennen">Rennen:</label><br>
     <select name="rennen" id="rennen" required>
-        <option value="">Bitte waehlen</option>
-        <?php while ($row = mysqli_fetch_assoc($rennenListe)) { ?>
-            <option value="<?php echo htmlspecialchars($row['Renn-ID']); ?>" <?php if ($rennen == $row['Renn-ID']) echo 'selected'; ?>>
-                <?php echo htmlspecialchars($row['Renn-ID'] . ' - ' . $row['Datum'] . ' - ' . $row['Standort']); ?>
+        <option value="">Bitte wählen</option>
+        <?php foreach ($rennenListe as $row) { ?>
+            <option value="<?php echo e($row['Renn-ID']); ?>" <?php if ((string) $rennen === (string) $row['Renn-ID']) echo 'selected'; ?>>
+                <?php echo e($row['Renn-ID'] . ' - ' . $row['Datum'] . ' - ' . $row['Standort']); ?>
             </option>
         <?php } ?>
     </select>
@@ -82,14 +189,14 @@ if ($rennen != '') {
     <button type="submit">Anzeigen</button>
 </form>
 
-<?php if ($rennen != '') { ?>
+<?php if ($rennen !== '') { ?>
     <h3>Fahrer des Rennens</h3>
 
-    <?php if ($anmeldungen == false || mysqli_num_rows($anmeldungen) == 0) { ?>
-        <p>Keine Anmeldungen fuer dieses Rennen gefunden.</p>
+    <?php if (count($anmeldungen) === 0) { ?>
+        <p>Keine Anmeldungen für dieses Rennen gefunden.</p>
     <?php } else { ?>
         <form method="post" action="ergebnisse.php">
-            <input type="hidden" name="rennen" value="<?php echo htmlspecialchars($rennen); ?>">
+            <input type="hidden" name="rennen" value="<?php echo e($rennen); ?>">
 
             <table border="1" cellpadding="5" cellspacing="0">
                 <tr>
@@ -100,27 +207,21 @@ if ($rennen != '') {
                     <th>Fahrtzeit</th>
                 </tr>
 
-                <?php while ($row = mysqli_fetch_assoc($anmeldungen)) { ?>
+                <?php foreach ($anmeldungen as $row) { ?>
                     <tr>
                         <td>
-                            <?php echo htmlspecialchars($row['Startnummer']); ?>
-                            <input type="hidden" name="startnummer[]" value="<?php echo htmlspecialchars($row['Startnummer']); ?>">
+                            <?php echo e($row['Startnummer']); ?>
+                            <input type="hidden" name="startnummer[]" value="<?php echo e($row['Startnummer']); ?>">
                         </td>
-                        <td><?php echo htmlspecialchars($row['Mitarbeiter_ID'] . ' - ' . $row['Name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['Team']); ?></td>
+                        <td><?php echo e($row['Mitarbeiter_ID'] . ' - ' . $row['Name']); ?></td>
+                        <td><?php echo e($row['Team']); ?></td>
 
-                        <?php if ($row['Platzierung'] == 0 && $row['Fahrtzeit'] == 0) { ?>
-                            <td><input type="number" name="platzierung[]" min="1"></td>
-                            <td><input type="number" name="fahrtzeit[]" min="1"></td>
+                        <?php if ((int) $row['Platzierung'] === 0 && (int) $row['Fahrtzeit'] === 0) { ?>
+                            <td><input type="number" name="platzierung[]" min="1" required></td>
+                            <td><input type="number" name="fahrtzeit[]" min="1" required></td>
                         <?php } else { ?>
-                            <td>
-                                <?php echo htmlspecialchars($row['Platzierung']); ?>
-                                <input type="hidden" name="platzierung[]" value="">
-                            </td>
-                            <td>
-                                <?php echo htmlspecialchars($row['Fahrtzeit']); ?>
-                                <input type="hidden" name="fahrtzeit[]" value="">
-                            </td>
+                            <td><?php echo e($row['Platzierung']); ?></td>
+                            <td><?php echo e($row['Fahrtzeit']); ?></td>
                         <?php } ?>
                     </tr>
                 <?php } ?>
@@ -133,5 +234,6 @@ if ($rennen != '') {
     <?php } ?>
 <?php } ?>
 
+<p><a href="veranstalter_dashboard.php">Zurück zum Dashboard</a></p>
 </body>
 </html>

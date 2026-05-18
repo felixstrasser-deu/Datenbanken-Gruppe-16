@@ -1,23 +1,48 @@
 <?php
+/*
+ * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Trainingserfassung für Fahrer des angemeldeten Teamchefs.
+ */
+session_start();
 include 'db.php';
+require 'functions.php';
 
+require_role('teamchef');
 mysqli_set_charset($connection, 'utf8mb4');
 
 $meldung = '';
 $fehler = '';
+$team = (string) ($_SESSION['team'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $datum = trim($_POST['datum']);
-    $kilometer = trim($_POST['kilometer']);
-    $trainingsziel = trim($_POST['trainingsziel']);
-    $mitarbeiter = trim($_POST['mitarbeiter']);
+    $datum = post_value('datum');
+    $kilometer = post_value('kilometer');
+    $trainingsziel = post_value('trainingsziel');
+    $mitarbeiter = post_value('mitarbeiter');
 
     if ($datum == '' || $kilometer == '' || $trainingsziel == '' || $mitarbeiter == '') {
         $fehler = 'Bitte alle Felder ausfüllen.';
     } elseif (!is_numeric($kilometer) || $kilometer <= 0) {
-        $fehler = 'Kilometer muss groesser als 0 sein.';
+        $fehler = 'Kilometer muss größer als 0 sein.';
     } elseif (!is_numeric($mitarbeiter)) {
         $fehler = 'Ungültiger Fahrer.';
+    }
+
+    if ($fehler == '') {
+        $checkStmt = mysqli_prepare($connection, 'SELECT 1 FROM Fahrer WHERE Mitarbeiter_ID = ? AND Team = ? LIMIT 1');
+        if ($checkStmt) {
+            mysqli_stmt_bind_param($checkStmt, 'is', $mitarbeiter, $team);
+            mysqli_stmt_execute($checkStmt);
+            mysqli_stmt_store_result($checkStmt);
+
+            if (mysqli_stmt_num_rows($checkStmt) === 0) {
+                $fehler = 'Dieser Fahrer gehört nicht zu deinem Team.';
+            }
+
+            mysqli_stmt_close($checkStmt);
+        } else {
+            $fehler = 'Fahrer konnte nicht geprüft werden.';
+        }
     }
 
     if ($fehler == '') {
@@ -41,14 +66,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 $fehler = $row['meldung'];
             }
+        } else {
+            $fehler = 'Training konnte nicht vorbereitet werden.';
         }
     }
 }
 
-$fahrer = mysqli_query($connection, 'SELECT Mitarbeiter_ID, Name, Team FROM Fahrer ORDER BY Name');
+$fahrer = array();
+$fahrerStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name, Team FROM Fahrer WHERE Team = ? ORDER BY Name');
+if ($fahrerStmt) {
+    mysqli_stmt_bind_param($fahrerStmt, 's', $team);
+    mysqli_stmt_execute($fahrerStmt);
+    mysqli_stmt_bind_result($fahrerStmt, $fahrerId, $fahrerName, $fahrerTeam);
+
+    while (mysqli_stmt_fetch($fahrerStmt)) {
+        $fahrer[] = array('Mitarbeiter_ID' => $fahrerId, 'Name' => $fahrerName, 'Team' => $fahrerTeam);
+    }
+
+    mysqli_stmt_close($fahrerStmt);
+}
+
 $trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
 
-if ($fahrer == false || $trainingsziele == false) {
+if ($trainingsziele == false) {
     $fehler = 'Daten konnten nicht geladen werden: ' . mysqli_error($connection);
 }
 ?>
@@ -62,25 +102,24 @@ if ($fahrer == false || $trainingsziele == false) {
 <body>
 
 <h2>Training erfassen</h2>
+<p>Team: <?php echo e($team); ?></p>
 
 <?php if ($meldung != '') { ?>
-    <p style="color: green;"><?php echo htmlspecialchars($meldung); ?></p>
+    <p style="color: green;"><?php echo e($meldung); ?></p>
 <?php } ?>
 
 <?php if ($fehler != '') { ?>
-    <p style="color: red;"><?php echo htmlspecialchars($fehler); ?></p>
+    <p style="color: red;"><?php echo e($fehler); ?></p>
 <?php } ?>
 
 <form method="post" action="training.php">
     <label for="mitarbeiter">Fahrer:</label><br>
     <select name="mitarbeiter" id="mitarbeiter" required>
-        <option value="">Bitte waehlen</option>
-        <?php if ($fahrer != false) { ?>
-            <?php while ($row = mysqli_fetch_assoc($fahrer)) { ?>
-                <option value="<?php echo htmlspecialchars($row['Mitarbeiter_ID']); ?>">
-                    <?php echo htmlspecialchars($row['Mitarbeiter_ID'] . ' - ' . $row['Name'] . ' (' . $row['Team'] . ')'); ?>
-                </option>
-            <?php } ?>
+        <option value="">Bitte wählen</option>
+        <?php foreach ($fahrer as $row) { ?>
+            <option value="<?php echo e($row['Mitarbeiter_ID']); ?>">
+                <?php echo e($row['Mitarbeiter_ID'] . ' - ' . $row['Name'] . ' (' . $row['Team'] . ')'); ?>
+            </option>
         <?php } ?>
     </select>
 
@@ -101,8 +140,8 @@ if ($fahrer == false || $trainingsziele == false) {
         <option value="">Bitte wählen</option>
         <?php if ($trainingsziele != false) { ?>
             <?php while ($row = mysqli_fetch_assoc($trainingsziele)) { ?>
-                <option value="<?php echo htmlspecialchars($row['Trainingsziel']); ?>">
-                    <?php echo htmlspecialchars($row['Trainingsziel']); ?>
+                <option value="<?php echo e($row['Trainingsziel']); ?>">
+                    <?php echo e($row['Trainingsziel']); ?>
                 </option>
             <?php } ?>
         <?php } ?>
@@ -113,5 +152,7 @@ if ($fahrer == false || $trainingsziele == false) {
     <button type="submit">Training speichern</button>
 </form>
 
+<p><a href="auswertung.php">Auswertung anzeigen</a></p>
+<p><a href="teamchef_dashboard.php">Zurück zum Dashboard</a></p>
 </body>
 </html>

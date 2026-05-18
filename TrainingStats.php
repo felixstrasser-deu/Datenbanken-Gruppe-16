@@ -3,11 +3,108 @@
 class TrainingStats
 {
     private $monatswerte = array();
+    private $fahrerId = null;
+    private $trainingsziel = '';
+    private $von = '';
+    private $bis = '';
+
+    public function __construct($fahrerId = null, $trainingsziel = '', $von = '', $bis = '')
+    {
+        $this->fahrerId = $fahrerId;
+        $this->trainingsziel = $trainingsziel;
+        $this->von = $von;
+        $this->bis = $bis;
+    }
+
+    public function setFahrerId($fahrerId)
+    {
+        $this->fahrerId = $fahrerId;
+    }
+
+    public function getFahrerId()
+    {
+        return $this->fahrerId;
+    }
+
+    public function setTrainingsziel($trainingsziel)
+    {
+        $this->trainingsziel = $trainingsziel;
+    }
+
+    public function getTrainingsziel()
+    {
+        return $this->trainingsziel;
+    }
+
+    public function setZeitraum($von, $bis)
+    {
+        $this->von = $von;
+        $this->bis = $bis;
+    }
+
+    public function loadFromDatabase($connection, $team)
+    {
+        $this->monatswerte = array();
+        $bedingungen = array('Fahrer.Team = ?');
+        $typen = 's';
+        $werte = array($team);
+
+        if ($this->fahrerId !== null && $this->fahrerId !== '') {
+            $bedingungen[] = 'Training.Mitarbeiter = ?';
+            $typen .= 'i';
+            $werte[] = (int) $this->fahrerId;
+        }
+
+        if ($this->trainingsziel !== '') {
+            $bedingungen[] = 'Training.Trainingsziel = ?';
+            $typen .= 's';
+            $werte[] = $this->trainingsziel;
+        }
+
+        if ($this->von !== '') {
+            $bedingungen[] = 'Training.Datum >= ?';
+            $typen .= 's';
+            $werte[] = $this->von;
+        }
+
+        if ($this->bis !== '') {
+            $bedingungen[] = 'Training.Datum <= ?';
+            $typen .= 's';
+            $werte[] = $this->bis;
+        }
+
+        $sql = 'SELECT Training.Datum, Training.Kilometer
+                FROM Training
+                INNER JOIN Fahrer ON Training.Mitarbeiter = Fahrer.Mitarbeiter_ID
+                WHERE ' . implode(' AND ', $bedingungen) . '
+                ORDER BY Training.Datum';
+
+        $stmt = mysqli_prepare($connection, $sql);
+        if (!$stmt) {
+            return false;
+        }
+
+        $bindParams = array($typen);
+        foreach ($werte as $key => $value) {
+            $bindParams[] = &$werte[$key];
+        }
+
+        call_user_func_array(array($stmt, 'bind_param'), $bindParams);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_bind_result($stmt, $datum, $kilometer);
+
+        while (mysqli_stmt_fetch($stmt)) {
+            $this->addTraining($datum, $kilometer);
+        }
+
+        mysqli_stmt_close($stmt);
+        return true;
+    }
 
     public function addTraining($datum, $kilometer)
     {
         if ($kilometer < 0) {
-            throw new InvalidArgumentException('Kilometer duerfen nicht negativ sein.');
+            throw new InvalidArgumentException('Kilometer dürfen nicht negativ sein.');
         }
 
         $monat = substr($datum, 0, 7);
@@ -56,6 +153,17 @@ class TrainingStats
         ksort($statistik);
 
         return $statistik;
+    }
+
+    public function getMonatswert($monat)
+    {
+        $statistik = $this->getMonatsStatistik();
+
+        if (isset($statistik[$monat])) {
+            return $statistik[$monat];
+        }
+
+        return null;
     }
 
     public function summe($werte)
