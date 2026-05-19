@@ -1,4 +1,7 @@
 <?php
+/*
+ * Autor: Magdalena Hamm
+ */
 $host = "localhost";
 $user = "gruppe16";
 $password = "Bq+7wpK9;J$?";

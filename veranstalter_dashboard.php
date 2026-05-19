@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Autor: Johnny Germar
  * Dashboard-Rahmen für Rennveranstalter. Rennen und Ergebnisse werden eingebunden.
  */
 session_start();
@@ -13,17 +13,12 @@ mysqli_set_charset($connection, 'utf8mb4');
 $nameRaw = (string) ($_SESSION['name'] ?? '');
 $meldung = '';
 $fehler = '';
-$dashboardBereich = post_value('bereich') !== '' ? post_value('bereich') : get_value('bereich');
 
 define('VERANSTALTER_DASHBOARD', true);
 $veranstalterModuleFiles = array(
     'rennen' => 'rennen.php',
     'ergebnisse' => 'ergebnisse.php',
 );
-
-if (!isset($veranstalterModuleFiles[$dashboardBereich])) {
-    $dashboardBereich = 'rennen';
-}
 
 $dashboardPhase = 'process';
 foreach ($veranstalterModuleFiles as $moduleFile) {
@@ -38,13 +33,6 @@ foreach ($veranstalterModuleFiles as $moduleFile) {
 </head>
 <body>
 <h1>Veranstalter Dashboard</h1>
-<p>Angemeldet als: <?php echo e($nameRaw); ?></p>
-
-<nav>
-    <a href="veranstalter_dashboard.php?bereich=rennen">Rennen anlegen</a> |
-    <a href="veranstalter_dashboard.php?bereich=ergebnisse">Ergebnisse erfassen</a>
-</nav>
-<hr>
 
 <?php foreach (array($meldung, $fehler) as $hinweis) { ?>
     <?php if ($hinweis !== '') { ?>
@@ -54,7 +42,9 @@ foreach ($veranstalterModuleFiles as $moduleFile) {
 
 <?php
 $dashboardPhase = 'render';
-include $veranstalterModuleFiles[$dashboardBereich];
+foreach ($veranstalterModuleFiles as $moduleFile) {
+    include $moduleFile;
+}
 ?>
 
 <p><a href="logout.php">Logout</a></p>

@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
- * Include-Modul fuer die Trainingsauswertung aller Teamfahrer.
+ * Autor: Magdalena Hamm
+ * Include-Modul für die Trainingsauswertung aller Teamfahrer.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');

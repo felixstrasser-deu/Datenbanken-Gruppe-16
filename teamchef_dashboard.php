@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Autor: Felix Straßer
  * Dashboard-Rahmen für Teamchefs. Die einzelnen Aufgabenbereiche werden eingebunden.
  */
 session_start();
@@ -15,7 +15,6 @@ $teamRaw = (string) ($_SESSION['team'] ?? '');
 $meldung = '';
 $fehler = '';
 $taskAction = post_value('task_action');
-$dashboardBereich = post_value('bereich') !== '' ? post_value('bereich') : get_value('bereich');
 
 define('TEAMCHEF_DASHBOARD', true);
 $teamchefModuleFiles = array(
@@ -25,10 +24,6 @@ $teamchefModuleFiles = array(
     'training' => 'training.php',
     'auswertung' => 'auswertung.php',
 );
-
-if (!isset($teamchefModuleFiles[$dashboardBereich])) {
-    $dashboardBereich = 'fahrer';
-}
 
 $dashboardPhase = 'process';
 foreach ($teamchefModuleFiles as $moduleFile) {
@@ -43,17 +38,6 @@ foreach ($teamchefModuleFiles as $moduleFile) {
 </head>
 <body>
 <h1>Teamchef Dashboard</h1>
-<p>Angemeldet als: <?php echo e($_SESSION['loginname'] ?? ''); ?></p>
-<p>Team: <?php echo e($teamRaw); ?></p>
-
-<nav>
-    <a href="teamchef_dashboard.php?bereich=fahrer">Fahrer pflegen</a> |
-    <a href="teamchef_dashboard.php?bereich=anmeldung">Fahrer anmelden</a> |
-    <a href="teamchef_dashboard.php?bereich=kopieren">Anmeldungen kopieren</a> |
-    <a href="teamchef_dashboard.php?bereich=training">Training erfassen</a> |
-    <a href="teamchef_dashboard.php?bereich=auswertung">Auswertung</a>
-</nav>
-<hr>
 
 <?php foreach (array($meldung, $fehler) as $hinweis) { ?>
     <?php if ($hinweis !== '') { ?>
@@ -63,7 +47,9 @@ foreach ($teamchefModuleFiles as $moduleFile) {
 
 <?php
 $dashboardPhase = 'render';
-include $teamchefModuleFiles[$dashboardBereich];
+foreach ($teamchefModuleFiles as $moduleFile) {
+    include $moduleFile;
+}
 ?>
 
 <p><a href="logout.php">Logout</a></p>

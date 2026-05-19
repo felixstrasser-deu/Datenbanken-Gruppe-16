@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Autor: Johnny Germar
  * Login-Baustein für Rennveranstalter.
  */
 $direktaufruf = !defined('INDEX_PAGE');

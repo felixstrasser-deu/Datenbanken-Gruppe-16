@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
- * Include-Modul fuer Trainingserfassung.
+ * Autor: Magdalena Hamm
+ * Include-Modul für Trainingserfassung.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
@@ -16,17 +16,17 @@ if (($dashboardPhase ?? '') === 'process') {
         $mitarbeiter = post_value('training_mitarbeiter');
 
         if ($datum === '' || $kilometer === '' || $trainingsziel === '' || $mitarbeiter === '') {
-            $fehler = 'Bitte alle Trainingsfelder ausfuellen.';
+            $fehler = 'Bitte alle Trainingsfelder ausfüllen.';
         } elseif (!is_numeric($kilometer) || $kilometer <= 0) {
-            $fehler = 'Kilometer muss groesser als 0 sein.';
+            $fehler = 'Kilometer muss größer als 0 sein.';
         } elseif (!is_numeric($mitarbeiter)) {
-            $fehler = 'Ungueltiger Fahrer.';
+            $fehler = 'Ungültiger Fahrer.';
         }
 
         if ($fehler === '') {
-            $stmt = mysqli_prepare($connection, 'CALL TrainingSpeichern(?, ?, ?, ?, @status, @meldung)');
+            $stmt = mysqli_prepare($connection, 'CALL TrainingSpeichern(?, ?, ?, ?, ?, @status, @meldung)');
             if ($stmt) {
-                mysqli_stmt_bind_param($stmt, 'sdsi', $datum, $kilometer, $trainingsziel, $mitarbeiter);
+                mysqli_stmt_bind_param($stmt, 'sisds', $teamRaw, $mitarbeiter, $datum, $kilometer, $trainingsziel);
                 mysqli_stmt_execute($stmt);
                 mysqli_stmt_close($stmt);
 
@@ -81,7 +81,7 @@ if (($dashboardPhase ?? '') === 'render') {
 
     <label for="training_mitarbeiter">Fahrer:</label><br>
     <select name="training_mitarbeiter" id="training_mitarbeiter" required>
-        <option value="">Bitte waehlen</option>
+        <option value="">Bitte wählen</option>
         <?php foreach ($trainingFahrer as $fahrerOption) { ?>
             <option value="<?php echo e($fahrerOption['Mitarbeiter_ID']); ?>">
                 <?php echo e($fahrerOption['Mitarbeiter_ID'] . ' - ' . $fahrerOption['Name']); ?>
@@ -100,7 +100,7 @@ if (($dashboardPhase ?? '') === 'render') {
 
     <label for="training_trainingsziel">Trainingsziel:</label><br>
     <select name="training_trainingsziel" id="training_trainingsziel" required>
-        <option value="">Bitte waehlen</option>
+        <option value="">Bitte wählen</option>
         <?php foreach ($trainingZiele as $zielOption) { ?>
             <option value="<?php echo e($zielOption); ?>"><?php echo e($zielOption); ?></option>
         <?php } ?>

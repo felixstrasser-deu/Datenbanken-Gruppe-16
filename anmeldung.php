@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
- * Include-Modul fuer Fahrer-Anmeldungen zu Rennen.
+ * Autor: Johnny Germar
+ * Include-Modul für Fahrer-Anmeldungen zu Rennen.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
@@ -16,9 +16,9 @@ if (($dashboardPhase ?? '') === 'process') {
         $uebersprungen = 0;
 
         if ($rennenId === false || $rennenId <= 0) {
-            $fehler = 'Bitte ein gueltiges Rennen auswaehlen.';
+            $fehler = 'Bitte ein gültiges Rennen auswählen.';
         } elseif (!rennen_ist_zukuenftig($connection, $rennenId)) {
-            $fehler = 'Bitte ein zukuenftiges Rennen auswaehlen.';
+            $fehler = 'Bitte ein zukünftiges Rennen auswählen.';
         } else {
             foreach ($fahrerIds as $fahrerIdRaw) {
                 $fahrerId = filter_var($fahrerIdRaw, FILTER_VALIDATE_INT);
@@ -35,7 +35,7 @@ if (($dashboardPhase ?? '') === 'process') {
 
             $meldung = $gespeichert . ' Fahrer wurden angemeldet.';
             if ($uebersprungen > 0) {
-                $meldung .= ' ' . $uebersprungen . ' Eintraege wurden uebersprungen.';
+                $meldung .= ' ' . $uebersprungen . ' Einträge wurden übersprungen.';
             }
         }
     }
@@ -55,12 +55,12 @@ if (($dashboardPhase ?? '') === 'render') {
 <h3 id="anmeldung">Fahrer zu Rennen anmelden</h3>
 <form method="get" action="teamchef_dashboard.php#anmeldung">
     <input type="hidden" name="bereich" value="anmeldung">
-    <label for="anmeldung_rennen_id">Zukuenftiges Rennen:</label><br>
+    <label for="anmeldung_rennen_id">Zukünftiges Rennen:</label><br>
     <select name="anmeldung_rennen_id" id="anmeldung_rennen_id" required>
-        <option value="">Bitte waehlen</option>
+        <option value="">Bitte wählen</option>
         <?php foreach ($anmeldungRennen as $rennenEintrag) { ?>
-            <option value="<?php echo e($rennenEintrag['Renn-ID']); ?>" <?php if ((string) $anmeldungRennenId === (string) $rennenEintrag['Renn-ID']) echo 'selected'; ?>>
-                <?php echo e($rennenEintrag['Renn-ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
+            <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>" <?php if ((string) $anmeldungRennenId === (string) $rennenEintrag['Renn_ID']) echo 'selected'; ?>>
+                <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
             </option>
         <?php } ?>
     </select>
@@ -75,7 +75,7 @@ if (($dashboardPhase ?? '') === 'render') {
 
 <?php if ($anmeldungRennenId !== false && $anmeldungRennenId > 0 && $anmeldungAnzahl > 0) { ?>
     <?php if (count($anmeldungFahrer) === 0) { ?>
-        <p>Fuer dieses Team sind keine Fahrer angelegt.</p>
+        <p>Für dieses Team sind keine Fahrer angelegt.</p>
     <?php } else { ?>
         <form method="post" action="teamchef_dashboard.php?bereich=anmeldung#anmeldung">
             <input type="hidden" name="bereich" value="anmeldung">
@@ -91,7 +91,7 @@ if (($dashboardPhase ?? '') === 'render') {
                         <td><?php echo e($i + 1); ?></td>
                         <td>
                             <select name="anmeldung_fahrer[]" required>
-                                <option value="">Bitte waehlen</option>
+                                <option value="">Bitte wählen</option>
                                 <?php foreach ($anmeldungFahrer as $fahrerOption) { ?>
                                     <option value="<?php echo e($fahrerOption['Mitarbeiter_ID']); ?>">
                                         <?php echo e($fahrerOption['Mitarbeiter_ID'] . ' - ' . $fahrerOption['Name']); ?>

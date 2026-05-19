@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Autor: Felix Straßer
  * Login-Baustein für Teamchefs.
  */
 $direktaufruf = !defined('INDEX_PAGE');

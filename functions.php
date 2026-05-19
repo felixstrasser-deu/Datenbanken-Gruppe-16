@@ -1,24 +1,27 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
- * Gemeinsame Hilfsfunktionen fuer Authentifizierung, Ausgabe und Datenbankzugriffe.
+ * Gemeinsame Hilfsfunktionen für Authentifizierung, Ausgabe und Datenbankzugriffe.
  */
 
+/*Magdalena Hamm*/
 function e($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+/*Magdalena Hamm*/
 function post_value($key)
 {
     return trim((string) ($_POST[$key] ?? ''));
 }
 
+/*Magdalena Hamm*/
 function get_value($key)
 {
     return trim((string) ($_GET[$key] ?? ''));
 }
 
+/*Magdalena Hamm*/
 function require_role($role)
 {
     if (!isset($_SESSION['rolle']) || $_SESSION['rolle'] !== $role) {
@@ -27,6 +30,7 @@ function require_role($role)
     }
 }
 
+/*Felix Straßer*/
 function team_exists($connection, $teamname)
 {
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Team WHERE Teamname = ? LIMIT 1');
@@ -43,6 +47,7 @@ function team_exists($connection, $teamname)
     return $exists;
 }
 
+/*Felix Straßer*/
 function loginname_exists($connection, $loginname)
 {
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Teamchef WHERE Loginname = ? LIMIT 1');
@@ -59,6 +64,7 @@ function loginname_exists($connection, $loginname)
     return $exists;
 }
 
+/*Felix Straßer*/
 function create_team_with_chef($connection, $teamname, $loginname, $name, $vorname, $kennwort)
 {
     mysqli_begin_transaction($connection);
@@ -98,6 +104,7 @@ function create_team_with_chef($connection, $teamname, $loginname, $name, $vorna
     return true;
 }
 
+/*Felix Straßer*/
 function save_fahrer($connection, $mode, $team, $mitarbeiterId, $name, $strasse, $hausnr, $plz, $ort, $telnr)
 {
     $sql = 'CALL FahrerSpeichern(?, ?, ?, ?, ?, ?, ?, ?, ?, @fahrer_status, @fahrer_meldung)';
@@ -116,20 +123,21 @@ function save_fahrer($connection, $mode, $team, $mitarbeiterId, $name, $strasse,
     }
 
     if (!$ok) {
-        return array(false, 'Stored Procedure FahrerSpeichern konnte nicht ausgefuehrt werden: ' . $error);
+        return array(false, 'Stored Procedure FahrerSpeichern konnte nicht ausgeführt werden: ' . $error);
     }
 
     $result = mysqli_query($connection, 'SELECT @fahrer_status AS status, @fahrer_meldung AS meldung');
     if (!$result || !($row = mysqli_fetch_assoc($result))) {
-        return array(false, 'Rueckmeldung der Stored Procedure konnte nicht gelesen werden.');
+        return array(false, 'Rückmeldung der Stored Procedure konnte nicht gelesen werden.');
     }
 
     return array($row['status'] === 'OK', $row['meldung']);
 }
 
+/*Johnny Germar*/
 function create_rennen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $veranstalterName)
 {
-    $sql = 'INSERT INTO Radrennen (`Datum`, `Standort`, `Kilometer`, `Höhenmeter`, `MaxSteigung`, `VName`) VALUES (?, ?, ?, ?, ?, ?)';
+    $sql = 'INSERT INTO Radrennen (`Datum`, `Standort`, `Kilometer`, `Hoehenmeter`, `MaxSteigung`, `VName`) VALUES (?, ?, ?, ?, ?, ?)';
     $stmt = mysqli_prepare($connection, $sql);
     if (!$stmt) {
         return false;
@@ -142,9 +150,10 @@ function create_rennen($connection, $datum, $standort, $kilometer, $hoehenmeter,
     return $ok;
 }
 
+/*Johnny Germar*/
 function rennen_ist_zukuenftig($connection, $rennenId)
 {
-    $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Radrennen WHERE `Renn-ID` = ? AND Datum >= CURDATE() LIMIT 1');
+    $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Radrennen WHERE `Renn_ID` = ? AND Datum > CURDATE() LIMIT 1');
     if (!$stmt) {
         return false;
     }
@@ -158,9 +167,10 @@ function rennen_ist_zukuenftig($connection, $rennenId)
     return $exists;
 }
 
+/*Johnny Germar*/
 function melde_fahrer_an($connection, $rennenId, $team, $mitarbeiterId)
 {
-    $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, `PrämieTeam`, `PrämieVeranstalter`, `Radrennen`, `Team`, `Mitarbeiter`)
+    $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, `PraemieTeam`, `PraemieVeranstalter`, `Radrennen`, `Team`, `Mitarbeiter`)
             VALUES (0, 0, 0, 0, 0, ?, ?, ?)';
     $stmt = mysqli_prepare($connection, $sql);
     if (!$stmt) {
@@ -174,6 +184,7 @@ function melde_fahrer_an($connection, $rennenId, $team, $mitarbeiterId)
     return $ok;
 }
 
+/*Johnny Germar*/
 function fahrer_liste_fuer_team($connection, $team)
 {
     $fahrer = array();
@@ -194,6 +205,7 @@ function fahrer_liste_fuer_team($connection, $team)
     return $fahrer;
 }
 
+/*Magdalena Hamm*/
 function trainingsziel_liste($connection)
 {
     $ziele = array();
@@ -208,15 +220,16 @@ function trainingsziel_liste($connection)
     return $ziele;
 }
 
+/*Johnny Germar*/
 function rennen_liste($connection, $nurZukuenftig)
 {
     $rennen = array();
-    $sql = 'SELECT `Renn-ID`, Datum, Standort FROM Radrennen';
+    $sql = 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen';
 
     if ($nurZukuenftig) {
-        $sql .= ' WHERE Datum >= CURDATE() ORDER BY Datum ASC, `Renn-ID` ASC';
+        $sql .= ' WHERE Datum >= CURDATE() ORDER BY Datum ASC, `Renn_ID` ASC';
     } else {
-        $sql .= ' ORDER BY Datum DESC, `Renn-ID` DESC';
+        $sql .= ' ORDER BY Datum DESC, `Renn_ID` DESC';
     }
 
     $result = mysqli_query($connection, $sql);

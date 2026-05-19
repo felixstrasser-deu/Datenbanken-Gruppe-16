@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
- * Include-Modul fuer Fahrer anlegen, aendern, loeschen und anzeigen.
+ * Autor: Felix Strasser
+ * Include-Modul für Fahrer anlegen, ändern, löschen und anzeigen.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
@@ -9,111 +9,81 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
 }
 
 if (($dashboardPhase ?? '') === 'process') {
+    $meldungen = array('created' => 'Fahrer wurde angelegt.', 'updated' => 'Fahrer wurde aktualisiert.', 'deleted' => 'Fahrer wurde gelöscht.');
+    $fehlertexte = array('exists' => 'Mitarbeiter-ID ist bereits vergeben.', 'notfound' => 'Fahrer wurde nicht gefunden.', 'error' => 'Aktion konnte nicht ausgeführt werden.');
     $status = get_value('status');
-    if ($status === 'created') {
-        $meldung = 'Fahrer wurde angelegt.';
-    } elseif ($status === 'updated') {
-        $meldung = 'Fahrer wurde aktualisiert.';
-    } elseif ($status === 'deleted') {
-        $meldung = 'Fahrer wurde geloescht.';
-    } elseif ($status === 'exists') {
-        $fehler = 'Mitarbeiter-ID ist bereits vergeben.';
-    } elseif ($status === 'notfound') {
-        $fehler = 'Fahrer wurde nicht gefunden.';
-    } elseif ($status === 'error') {
-        $fehler = 'Aktion konnte nicht ausgefuehrt werden.';
+
+    if (isset($meldungen[$status])) {
+        $meldung = $meldungen[$status];
+    } elseif (isset($fehlertexte[$status])) {
+        $fehler = $fehlertexte[$status];
     }
 
     $formMode = 'create';
-    $form = array(
-        'mitarbeiter_id' => '',
-        'name' => '',
-        'strasse' => '',
-        'hausnr' => '',
-        'plz' => '',
-        'ort' => '',
-        'telnr' => '',
-    );
+    $felder = array('mitarbeiter_id', 'name', 'strasse', 'hausnr', 'plz', 'ort', 'telnr');
+    $form = array_fill_keys($felder, '');
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = post_value('fahrer_action');
 
         if ($action === 'delete') {
             $deleteId = filter_var(post_value('delete_mitarbeiter_id'), FILTER_VALIDATE_INT);
+            $deleteStmt = $deleteId > 0 ? mysqli_prepare($connection, 'DELETE FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ?') : false;
 
-            if ($deleteId === false || $deleteId <= 0) {
-                header('Location: teamchef_dashboard.php?bereich=fahrer&status=error');
-                exit;
+            if ($deleteStmt) {
+                mysqli_stmt_bind_param($deleteStmt, 'is', $deleteId, $teamRaw);
+                mysqli_stmt_execute($deleteStmt);
+                $status = mysqli_stmt_affected_rows($deleteStmt) > 0 ? 'deleted' : 'notfound';
+                mysqli_stmt_close($deleteStmt);
+            } else {
+                $status = 'error';
             }
 
-            $deleteStmt = mysqli_prepare($connection, 'DELETE FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ?');
-            if (!$deleteStmt) {
-                header('Location: teamchef_dashboard.php?bereich=fahrer&status=error');
-                exit;
-            }
-
-            mysqli_stmt_bind_param($deleteStmt, 'is', $deleteId, $teamRaw);
-            mysqli_stmt_execute($deleteStmt);
-            $deletedRows = mysqli_stmt_affected_rows($deleteStmt);
-            mysqli_stmt_close($deleteStmt);
-
-            header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . ($deletedRows > 0 ? 'deleted' : 'notfound'));
+            header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . $status);
             exit;
         }
 
         if ($action === 'save') {
             $formMode = post_value('form_mode') === 'edit' ? 'edit' : 'create';
-            $originalIdRaw = post_value('original_mitarbeiter_id');
-
-            $form['mitarbeiter_id'] = post_value('mitarbeiter_id');
-            $form['name'] = post_value('name');
-            $form['strasse'] = post_value('strasse');
-            $form['hausnr'] = post_value('hausnr');
-            $form['plz'] = post_value('plz');
-            $form['ort'] = post_value('ort');
-            $form['telnr'] = post_value('telnr');
+            foreach ($felder as $feld) {
+                $form[$feld] = post_value($feld);
+            }
 
             $errors = array();
-
-            if ($form['name'] === '' || $form['strasse'] === '' || $form['hausnr'] === '' || $form['plz'] === '' || $form['ort'] === '' || $form['telnr'] === '') {
-                $errors[] = 'Bitte alle Pflichtfelder ausfuellen.';
+            foreach (array('name', 'strasse', 'hausnr', 'plz', 'ort', 'telnr') as $feld) {
+                if ($form[$feld] === '') {
+                    $errors[] = 'Bitte alle Pflichtfelder ausfüllen.';
+                    break;
+                }
             }
 
-            if (strlen($form['name']) > 46 || strlen($form['strasse']) > 46 || strlen($form['hausnr']) > 46 || strlen($form['ort']) > 46 || strlen($form['telnr']) > 46) {
-                $errors[] = 'Textfelder duerfen maximal 46 Zeichen lang sein.';
+            foreach (array('name', 'strasse', 'hausnr', 'ort', 'telnr') as $feld) {
+                if (strlen($form[$feld]) > 46) {
+                    $errors[] = 'Textfelder dürfen maximal 46 Zeichen lang sein.';
+                    break;
+                }
             }
 
-            $plz = $form['plz'];
-            if (!preg_match('/^[0-9]{1,5}$/', $plz)) {
+            if (!preg_match('/^[0-9]{1,5}$/', $form['plz'])) {
                 $errors[] = 'PLZ muss aus maximal 5 Ziffern bestehen.';
             }
 
-            if ($formMode === 'create') {
-                $mitarbeiterId = filter_var($form['mitarbeiter_id'], FILTER_VALIDATE_INT);
-                if ($mitarbeiterId === false || $mitarbeiterId <= 0) {
-                    $errors[] = 'Mitarbeiter-ID muss eine positive Ganzzahl sein.';
-                }
-            } else {
-                $mitarbeiterId = filter_var($originalIdRaw, FILTER_VALIDATE_INT);
-                if ($mitarbeiterId === false || $mitarbeiterId <= 0) {
-                    $errors[] = 'Ungueltige Mitarbeiter-ID fuer Bearbeitung.';
-                }
-                $form['mitarbeiter_id'] = $originalIdRaw;
+            $mitarbeiterIdRaw = $formMode === 'edit' ? post_value('original_mitarbeiter_id') : $form['mitarbeiter_id'];
+            $mitarbeiterId = filter_var($mitarbeiterIdRaw, FILTER_VALIDATE_INT);
+            if ($mitarbeiterId === false || $mitarbeiterId <= 0) {
+                $errors[] = $formMode === 'edit' ? 'Ungültige Mitarbeiter-ID für Bearbeitung.' : 'Mitarbeiter-ID muss eine positive Ganzzahl sein.';
+            }
+            if ($formMode === 'edit') {
+                $form['mitarbeiter_id'] = $mitarbeiterIdRaw;
             }
 
             if (count($errors) === 0) {
-                list($ok, $message) = save_fahrer($connection, $formMode, $teamRaw, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $plz, $form['ort'], $form['telnr']);
-
-                if ($ok) {
-                    header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . ($formMode === 'create' ? 'created' : 'updated'));
+                list($ok, $message) = save_fahrer($connection, $formMode, $teamRaw, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $form['plz'], $form['ort'], $form['telnr']);
+                if ($ok || $message === 'Mitarbeiter-ID ist bereits vergeben.') {
+                    $status = $ok ? ($formMode === 'create' ? 'created' : 'updated') : 'exists';
+                    header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . $status);
                     exit;
                 }
-
-                if ($message === 'Mitarbeiter-ID ist bereits vergeben.') {
-                    header('Location: teamchef_dashboard.php?bereich=fahrer&status=exists');
-                    exit;
-                }
-
                 $fehler = $message;
             } else {
                 $fehler = implode(' ', $errors);
@@ -121,67 +91,46 @@ if (($dashboardPhase ?? '') === 'process') {
         }
     }
 
-    $editIdRaw = get_value('edit');
-    if ($editIdRaw !== '' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-        $editId = filter_var($editIdRaw, FILTER_VALIDATE_INT);
-
-        if ($editId !== false && $editId > 0) {
-            $editSql = 'SELECT `Mitarbeiter_ID`, `Name`, `Straße` AS Strasse, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ? LIMIT 1';
-            $editStmt = mysqli_prepare($connection, $editSql);
-
-            if ($editStmt) {
-                mysqli_stmt_bind_param($editStmt, 'is', $editId, $teamRaw);
-                mysqli_stmt_execute($editStmt);
-                mysqli_stmt_bind_result($editStmt, $dbId, $dbName, $dbStrasse, $dbHausnr, $dbPlz, $dbOrt, $dbTelnr);
-
-                if (mysqli_stmt_fetch($editStmt)) {
-                    $formMode = 'edit';
-                    $form['mitarbeiter_id'] = (string) $dbId;
-                    $form['name'] = (string) $dbName;
-                    $form['strasse'] = (string) $dbStrasse;
-                    $form['hausnr'] = (string) $dbHausnr;
-                    $form['plz'] = (string) $dbPlz;
-                    $form['ort'] = (string) $dbOrt;
-                    $form['telnr'] = (string) $dbTelnr;
-                } else {
-                    $fehler = 'Fahrer wurde nicht gefunden.';
-                }
-
-                mysqli_stmt_close($editStmt);
+    $editId = filter_var(get_value('edit'), FILTER_VALIDATE_INT);
+    if ($editId !== false && $editId > 0 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $editStmt = mysqli_prepare($connection, 'SELECT `Mitarbeiter_ID`, `Name`, `Strasse`, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ? LIMIT 1');
+        if ($editStmt) {
+            mysqli_stmt_bind_param($editStmt, 'is', $editId, $teamRaw);
+            mysqli_stmt_execute($editStmt);
+            mysqli_stmt_bind_result($editStmt, $dbId, $dbName, $dbStrasse, $dbHausnr, $dbPlz, $dbOrt, $dbTelnr);
+            if (mysqli_stmt_fetch($editStmt)) {
+                $formMode = 'edit';
+                $form = array('mitarbeiter_id' => $dbId, 'name' => $dbName, 'strasse' => $dbStrasse, 'hausnr' => $dbHausnr, 'plz' => $dbPlz, 'ort' => $dbOrt, 'telnr' => $dbTelnr);
             } else {
-                $fehler = 'Fahrer konnte nicht geladen werden.';
+                $fehler = 'Fahrer wurde nicht gefunden.';
             }
-        } else {
-            $fehler = 'Ungueltige Bearbeitungs-ID.';
+            mysqli_stmt_close($editStmt);
         }
     }
 
     $fahrer = array();
-    $fahrerSql = 'SELECT `Mitarbeiter_ID`, `Name`, `Straße` AS Strasse, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Team` = ? ORDER BY `Name`';
-    $fahrerStmt = mysqli_prepare($connection, $fahrerSql);
-
+    $fahrerStmt = mysqli_prepare($connection, 'SELECT `Mitarbeiter_ID`, `Name`, `Strasse`, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Team` = ? ORDER BY `Name`');
     if ($fahrerStmt) {
         mysqli_stmt_bind_param($fahrerStmt, 's', $teamRaw);
         mysqli_stmt_execute($fahrerStmt);
         mysqli_stmt_bind_result($fahrerStmt, $dbId, $dbName, $dbStrasse, $dbHausnr, $dbPlz, $dbOrt, $dbTelnr);
-
         while (mysqli_stmt_fetch($fahrerStmt)) {
-            $fahrer[] = array(
-                'Mitarbeiter_ID' => $dbId,
-                'Name' => $dbName,
-                'Strasse' => $dbStrasse,
-                'HausNr' => $dbHausnr,
-                'PLZ' => $dbPlz,
-                'Ort' => $dbOrt,
-                'TelNr' => $dbTelnr,
-            );
+            $fahrer[] = array('Mitarbeiter_ID' => $dbId, 'Name' => $dbName, 'Strasse' => $dbStrasse, 'HausNr' => $dbHausnr, 'PLZ' => $dbPlz, 'Ort' => $dbOrt, 'TelNr' => $dbTelnr);
         }
-
         mysqli_stmt_close($fahrerStmt);
     }
 }
 
 if (($dashboardPhase ?? '') === 'render') {
+$inputs = array(
+    'mitarbeiter_id' => array('Mitarbeiter-ID', 'number', '1', ''),
+    'name' => array('Name', 'text', '', '46'),
+    'strasse' => array('Straße', 'text', '', '46'),
+    'hausnr' => array('Hausnummer', 'text', '', '46'),
+    'plz' => array('PLZ', 'text', '', '5'),
+    'ort' => array('Ort', 'text', '', '46'),
+    'telnr' => array('Telefon', 'text', '', '46'),
+);
 ?>
 <h3 id="fahrerformular">Fahrer anlegen / bearbeiten</h3>
 <form method="post" action="teamchef_dashboard.php?bereich=fahrer">
@@ -190,33 +139,15 @@ if (($dashboardPhase ?? '') === 'render') {
     <input type="hidden" name="form_mode" value="<?php echo e($formMode); ?>">
     <input type="hidden" name="original_mitarbeiter_id" value="<?php echo e($form['mitarbeiter_id']); ?>">
 
-    <label for="mitarbeiter_id">Mitarbeiter-ID:</label><br>
-    <input type="number" id="mitarbeiter_id" name="mitarbeiter_id" min="1" value="<?php echo e($form['mitarbeiter_id']); ?>" <?php if ($formMode === 'edit') echo 'readonly'; ?> required>
-    <br><br>
-
-    <label for="name">Name:</label><br>
-    <input type="text" id="name" name="name" maxlength="46" value="<?php echo e($form['name']); ?>" required>
-    <br><br>
-
-    <label for="strasse">Straße:</label><br>
-    <input type="text" id="strasse" name="strasse" maxlength="46" value="<?php echo e($form['strasse']); ?>" required>
-    <br><br>
-
-    <label for="hausnr">Hausnummer:</label><br>
-    <input type="text" id="hausnr" name="hausnr" maxlength="46" value="<?php echo e($form['hausnr']); ?>" required>
-    <br><br>
-
-    <label for="plz">PLZ:</label><br>
-    <input type="text" id="plz" name="plz" maxlength="5" value="<?php echo e($form['plz']); ?>" required>
-    <br><br>
-
-    <label for="ort">Ort:</label><br>
-    <input type="text" id="ort" name="ort" maxlength="46" value="<?php echo e($form['ort']); ?>" required>
-    <br><br>
-
-    <label for="telnr">Telefon:</label><br>
-    <input type="text" id="telnr" name="telnr" maxlength="46" value="<?php echo e($form['telnr']); ?>" required>
-    <br><br>
+    <?php foreach ($inputs as $name => $daten) { ?>
+        <label for="<?php echo e($name); ?>"><?php echo e($daten[0]); ?>:</label><br>
+        <input type="<?php echo e($daten[1]); ?>" id="<?php echo e($name); ?>" name="<?php echo e($name); ?>"
+               value="<?php echo e($form[$name]); ?>"
+               <?php if ($daten[2] !== '') echo 'min="' . e($daten[2]) . '"'; ?>
+               <?php if ($daten[3] !== '') echo 'maxlength="' . e($daten[3]) . '"'; ?>
+               <?php if ($name === 'mitarbeiter_id' && $formMode === 'edit') echo 'readonly'; ?> required>
+        <br><br>
+    <?php } ?>
 
     <button type="submit"><?php echo $formMode === 'edit' ? 'Fahrer aktualisieren' : 'Fahrer anlegen'; ?></button>
     <?php if ($formMode === 'edit') { ?>
@@ -226,18 +157,11 @@ if (($dashboardPhase ?? '') === 'render') {
 
 <h3 id="fahrerliste">Fahrer im Team</h3>
 <?php if (count($fahrer) === 0) { ?>
-    <p>Es sind noch keine Fahrer fuer dieses Team angelegt.</p>
+    <p>Es sind noch keine Fahrer für dieses Team angelegt.</p>
 <?php } else { ?>
     <table border="1" cellpadding="5" cellspacing="0">
         <tr>
-            <th>Mitarbeiter-ID</th>
-            <th>Name</th>
-            <th>Straße</th>
-            <th>Hausnummer</th>
-            <th>PLZ</th>
-            <th>Ort</th>
-            <th>Telefon</th>
-            <th>Aktionen</th>
+            <th>Mitarbeiter-ID</th><th>Name</th><th>Straße</th><th>Hausnummer</th><th>PLZ</th><th>Ort</th><th>Telefon</th><th>Aktionen</th>
         </tr>
         <?php foreach ($fahrer as $eintrag) { ?>
             <tr>
@@ -254,7 +178,7 @@ if (($dashboardPhase ?? '') === 'render') {
                         <input type="hidden" name="bereich" value="fahrer">
                         <input type="hidden" name="fahrer_action" value="delete">
                         <input type="hidden" name="delete_mitarbeiter_id" value="<?php echo e($eintrag['Mitarbeiter_ID']); ?>">
-                        <button type="submit">Loeschen</button>
+                        <button type="submit">Löschen</button>
                     </form>
                 </td>
             </tr>

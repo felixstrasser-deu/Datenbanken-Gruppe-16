@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Autor: Johnny
  * Startseite mit eingebundenen Login- und Registrierungsbereichen.
  */
 session_start();

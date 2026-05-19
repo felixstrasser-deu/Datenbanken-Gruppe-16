@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
+ * Autor: Johnny Germar
  * Include-Modul zum Kopieren von Anmeldungen.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
@@ -61,7 +61,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 
     $kopierenAlleRennen = array();
-    $alleRennenResult = mysqli_query($connection, 'SELECT `Renn-ID`, Datum, Standort FROM Radrennen ORDER BY Datum DESC, `Renn-ID` DESC');
+    $alleRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen ORDER BY Datum DESC, `Renn_ID` DESC');
     if ($alleRennenResult) {
         while ($row = mysqli_fetch_assoc($alleRennenResult)) {
             $kopierenAlleRennen[] = $row;
@@ -69,7 +69,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 
     $kopierenZielRennen = array();
-    $zielRennenResult = mysqli_query($connection, 'SELECT `Renn-ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum ASC, `Renn-ID` ASC');
+    $zielRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum ASC, `Renn_ID` ASC');
     if ($zielRennenResult) {
         while ($row = mysqli_fetch_assoc($zielRennenResult)) {
             $kopierenZielRennen[] = $row;
@@ -89,8 +89,8 @@ if (($dashboardPhase ?? '') === 'render') {
     <select name="kopieren_quelle" id="kopieren_quelle" required>
         <option value="">Bitte wählen</option>
         <?php foreach ($kopierenAlleRennen as $rennenEintrag) { ?>
-            <option value="<?php echo e($rennenEintrag['Renn-ID']); ?>">
-                <?php echo e($rennenEintrag['Renn-ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
+            <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>">
+                <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
             </option>
         <?php } ?>
     </select>
@@ -100,8 +100,8 @@ if (($dashboardPhase ?? '') === 'render') {
     <select name="kopieren_ziel" id="kopieren_ziel" required>
         <option value="">Bitte wählen</option>
         <?php foreach ($kopierenZielRennen as $rennenEintrag) { ?>
-            <option value="<?php echo e($rennenEintrag['Renn-ID']); ?>">
-                <?php echo e($rennenEintrag['Renn-ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
+            <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>">
+                <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
             </option>
         <?php } ?>
     </select>

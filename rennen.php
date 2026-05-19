@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
- * Include-Modul fuer Rennen verwalten und anlegen.
+ * Autor: Johnny Germar
+ * Include-Modul für Rennen verwalten und anlegen.
  */
 if (!defined('VERANSTALTER_DASHBOARD')) {
     header('Location: veranstalter_dashboard.php');
@@ -17,9 +17,9 @@ if (($dashboardPhase ?? '') === 'process') {
         $maxSteigung = filter_var(post_value('max_steigung'), FILTER_VALIDATE_FLOAT);
 
         if ($datum === '' || $standort === '' || $kilometer === false || $hoehenmeter === false || $maxSteigung === false) {
-            $fehler = 'Bitte alle Renndaten gueltig ausfuellen.';
+            $fehler = 'Bitte alle Renndaten gültig ausfüllen.';
         } elseif ($kilometer <= 0 || $hoehenmeter < 0 || $maxSteigung < 0) {
-            $fehler = 'Kilometer muss groesser 0 sein; Hoehenmeter und Steigung duerfen nicht negativ sein.';
+            $fehler = 'Kilometer muss größer 0 sein; Höhenmeter und Steigung dürfen nicht negativ sein.';
         } elseif (strlen($standort) > 46) {
             $fehler = 'Der Standort darf maximal 46 Zeichen lang sein.';
         } else {
@@ -32,10 +32,10 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 
     $kommendeRennen = array();
-    $rennenSql = 'SELECT `Renn-ID`, Datum, Standort, Kilometer, `Höhenmeter` AS Hoehenmeter, MaxSteigung
+    $rennenSql = 'SELECT `Renn_ID`, Datum, Standort, Kilometer, `Hoehenmeter` AS Hoehenmeter, MaxSteigung
                   FROM Radrennen
                   WHERE Datum >= CURDATE()
-                  ORDER BY Datum ASC, `Renn-ID` ASC';
+                  ORDER BY Datum ASC, `Renn_ID` ASC';
     $rennenResult = mysqli_query($connection, $rennenSql);
 
     if ($rennenResult) {
@@ -64,7 +64,7 @@ if (($dashboardPhase ?? '') === 'render') {
     <input type="number" name="kilometer" id="kilometer" min="1" required>
     <br><br>
 
-    <label for="hoehenmeter">Hoehenmeter:</label><br>
+    <label for="hoehenmeter">Höhenmeter:</label><br>
     <input type="number" name="hoehenmeter" id="hoehenmeter" min="0" required>
     <br><br>
 
@@ -75,9 +75,9 @@ if (($dashboardPhase ?? '') === 'render') {
     <button type="submit">Rennen speichern</button>
 </form>
 
-<h3>Zukuenftige Rennen</h3>
+<h3>Zukünftige Rennen</h3>
 <?php if (count($kommendeRennen) === 0) { ?>
-    <p>Keine zukuenftigen Rennen vorhanden.</p>
+    <p>Keine zukünftigen Rennen vorhanden.</p>
 <?php } else { ?>
     <table border="1" cellpadding="5" cellspacing="0">
         <tr>
@@ -85,12 +85,12 @@ if (($dashboardPhase ?? '') === 'render') {
             <th>Datum</th>
             <th>Standort</th>
             <th>Kilometer</th>
-            <th>Hoehenmeter</th>
+            <th>Höhenmeter</th>
             <th>Max. Steigung</th>
         </tr>
         <?php foreach ($kommendeRennen as $rennen) { ?>
             <tr>
-                <td><?php echo e($rennen['Renn-ID']); ?></td>
+                <td><?php echo e($rennen['Renn_ID']); ?></td>
                 <td><?php echo e($rennen['Datum']); ?></td>
                 <td><?php echo e($rennen['Standort']); ?></td>
                 <td><?php echo e($rennen['Kilometer']); ?></td>
