@@ -6,11 +6,8 @@
 $direktaufruf = !defined('INDEX_PAGE');
 
 if ($direktaufruf) {
-    session_start();
-    require 'db.php';
-    require 'functions.php';
-    mysqli_set_charset($connection, 'utf8mb4');
-    $indexPhase = 'process';
+    header('Location: index.php');
+    exit;
 }
 
 $teamchefRegTeam = ($_POST['form_typ'] ?? '') === 'teamchef_reg' ? post_value('teamname') : '';
@@ -39,11 +36,6 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
     } else {
         $teamchefRegFehler = 'Registrierung konnte nicht gespeichert werden: ' . mysqli_error($connection);
     }
-}
-
-if ($direktaufruf) {
-    header('Location: index.php');
-    exit;
 }
 
 if (($indexPhase ?? '') === 'render') {
@@ -84,4 +76,5 @@ if (($indexPhase ?? '') === 'render') {
 </form>
 <?php
 }
+
 ?>

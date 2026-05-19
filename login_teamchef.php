@@ -6,11 +6,8 @@
 $direktaufruf = !defined('INDEX_PAGE');
 
 if ($direktaufruf) {
-    session_start();
-    require 'db.php';
-    require 'functions.php';
-    mysqli_set_charset($connection, 'utf8mb4');
-    $indexPhase = 'process';
+    header('Location: index.php');
+    exit;
 }
 
 if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_typ'] ?? '') === 'teamchef_login') {
@@ -58,11 +55,6 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
     }
 }
 
-if ($direktaufruf) {
-    header('Location: index.php');
-    exit;
-}
-
 if (($indexPhase ?? '') === 'render') {
 ?>
 <?php if ($teamchefLoginFehler !== '') { ?>
@@ -86,4 +78,5 @@ if (($indexPhase ?? '') === 'render') {
 </form>
 <?php
 }
+
 ?>

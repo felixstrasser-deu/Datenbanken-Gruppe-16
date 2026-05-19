@@ -17,6 +17,8 @@ if (($dashboardPhase ?? '') === 'process') {
             $fehler = 'Bitte Quell- und Zielrennen auswählen.';
         } elseif ($quelle === $ziel) {
             $fehler = 'Quelle und Ziel müssen unterschiedliche Rennen sein.';
+        } elseif (!rennen_ist_zukuenftig($connection, $ziel)) {
+            $fehler = 'Das Zielrennen muss ein zukünftiges Rennen sein.';
         } else {
             $sourceStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter FROM Anmeldung WHERE Radrennen = ? AND Team = ? ORDER BY Startnummer');
             if ($sourceStmt) {
@@ -38,16 +40,10 @@ if (($dashboardPhase ?? '') === 'process') {
                     $uebersprungen = 0;
 
                     foreach ($fahrerIds as $fahrerId) {
-                        if (fahrer_ist_angemeldet($connection, $ziel, $fahrerId)) {
-                            $uebersprungen++;
-                            continue;
-                        }
-
                         if (melde_fahrer_an($connection, $ziel, $teamRaw, $fahrerId)) {
                             $kopiert++;
                         } else {
-                            $fehler = 'Kopieren wurde abgebrochen: ' . mysqli_error($connection);
-                            break;
+                            $uebersprungen++;
                         }
                     }
 
@@ -85,7 +81,8 @@ if (($dashboardPhase ?? '') === 'render') {
 ?>
 <hr>
 <h3 id="kopieren">Anmeldungen kopieren</h3>
-<form method="post" action="teamchef_dashboard.php#kopieren">
+<form method="post" action="teamchef_dashboard.php?bereich=kopieren#kopieren">
+    <input type="hidden" name="bereich" value="kopieren">
     <input type="hidden" name="task_action" value="kopieren_speichern">
 
     <label for="kopieren_quelle">Anmeldungen aus Rennen:</label><br>

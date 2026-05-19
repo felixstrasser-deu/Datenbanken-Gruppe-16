@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
- * Include-Modul für Trainingserfassung.
+ * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
+ * Include-Modul fuer Trainingserfassung.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
@@ -16,26 +16,11 @@ if (($dashboardPhase ?? '') === 'process') {
         $mitarbeiter = post_value('training_mitarbeiter');
 
         if ($datum === '' || $kilometer === '' || $trainingsziel === '' || $mitarbeiter === '') {
-            $fehler = 'Bitte alle Trainingsfelder ausfüllen.';
+            $fehler = 'Bitte alle Trainingsfelder ausfuellen.';
         } elseif (!is_numeric($kilometer) || $kilometer <= 0) {
-            $fehler = 'Kilometer muss größer als 0 sein.';
+            $fehler = 'Kilometer muss groesser als 0 sein.';
         } elseif (!is_numeric($mitarbeiter)) {
-            $fehler = 'Ungültiger Fahrer.';
-        } else {
-            $checkStmt = mysqli_prepare($connection, 'SELECT 1 FROM Fahrer WHERE Mitarbeiter_ID = ? AND Team = ? LIMIT 1');
-            if ($checkStmt) {
-                mysqli_stmt_bind_param($checkStmt, 'is', $mitarbeiter, $teamRaw);
-                mysqli_stmt_execute($checkStmt);
-                mysqli_stmt_store_result($checkStmt);
-                $fahrerOk = mysqli_stmt_num_rows($checkStmt) > 0;
-                mysqli_stmt_close($checkStmt);
-
-                if (!$fahrerOk) {
-                    $fehler = 'Dieser Fahrer gehört nicht zu deinem Team.';
-                }
-            } else {
-                $fehler = 'Fahrer konnte nicht geprüft werden.';
-            }
+            $fehler = 'Ungueltiger Fahrer.';
         }
 
         if ($fehler === '') {
@@ -90,12 +75,13 @@ if (($dashboardPhase ?? '') === 'render') {
 ?>
 <hr>
 <h3 id="training">Training erfassen</h3>
-<form method="post" action="teamchef_dashboard.php#training">
+<form method="post" action="teamchef_dashboard.php?bereich=training#training">
+    <input type="hidden" name="bereich" value="training">
     <input type="hidden" name="task_action" value="training_speichern">
 
     <label for="training_mitarbeiter">Fahrer:</label><br>
     <select name="training_mitarbeiter" id="training_mitarbeiter" required>
-        <option value="">Bitte wählen</option>
+        <option value="">Bitte waehlen</option>
         <?php foreach ($trainingFahrer as $fahrerOption) { ?>
             <option value="<?php echo e($fahrerOption['Mitarbeiter_ID']); ?>">
                 <?php echo e($fahrerOption['Mitarbeiter_ID'] . ' - ' . $fahrerOption['Name']); ?>
@@ -114,7 +100,7 @@ if (($dashboardPhase ?? '') === 'render') {
 
     <label for="training_trainingsziel">Trainingsziel:</label><br>
     <select name="training_trainingsziel" id="training_trainingsziel" required>
-        <option value="">Bitte wählen</option>
+        <option value="">Bitte waehlen</option>
         <?php foreach ($trainingZiele as $zielOption) { ?>
             <option value="<?php echo e($zielOption); ?>"><?php echo e($zielOption); ?></option>
         <?php } ?>

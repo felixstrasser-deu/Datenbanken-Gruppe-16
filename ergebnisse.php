@@ -157,6 +157,7 @@ if (($dashboardPhase ?? '') === 'render') {
 <hr>
 <h3 id="ergebnisse">Ergebnisse erfassen</h3>
 <form method="get" action="veranstalter_dashboard.php#ergebnisse">
+    <input type="hidden" name="bereich" value="ergebnisse">
     <label for="ergebnis_rennen">Rennen:</label><br>
     <select name="ergebnis_rennen" id="ergebnis_rennen" required>
         <option value="">Bitte wählen</option>
@@ -175,7 +176,8 @@ if (($dashboardPhase ?? '') === 'render') {
     <?php if (count($ergebnisAnmeldungen) === 0) { ?>
         <p>Keine Anmeldungen für dieses Rennen gefunden.</p>
     <?php } else { ?>
-        <form method="post" action="veranstalter_dashboard.php#ergebnisse">
+        <form method="post" action="veranstalter_dashboard.php?bereich=ergebnisse#ergebnisse">
+            <input type="hidden" name="bereich" value="ergebnisse">
             <input type="hidden" name="aktion" value="ergebnisse_speichern">
             <input type="hidden" name="ergebnis_rennen" value="<?php echo e($ergebnisRennen); ?>">
 

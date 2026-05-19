@@ -13,9 +13,17 @@ mysqli_set_charset($connection, 'utf8mb4');
 $nameRaw = (string) ($_SESSION['name'] ?? '');
 $meldung = '';
 $fehler = '';
+$dashboardBereich = post_value('bereich') !== '' ? post_value('bereich') : get_value('bereich');
 
 define('VERANSTALTER_DASHBOARD', true);
-$veranstalterModuleFiles = array('rennen.php', 'ergebnisse.php');
+$veranstalterModuleFiles = array(
+    'rennen' => 'rennen.php',
+    'ergebnisse' => 'ergebnisse.php',
+);
+
+if (!isset($veranstalterModuleFiles[$dashboardBereich])) {
+    $dashboardBereich = 'rennen';
+}
 
 $dashboardPhase = 'process';
 foreach ($veranstalterModuleFiles as $moduleFile) {
@@ -32,6 +40,12 @@ foreach ($veranstalterModuleFiles as $moduleFile) {
 <h1>Veranstalter Dashboard</h1>
 <p>Angemeldet als: <?php echo e($nameRaw); ?></p>
 
+<nav>
+    <a href="veranstalter_dashboard.php?bereich=rennen">Rennen anlegen</a> |
+    <a href="veranstalter_dashboard.php?bereich=ergebnisse">Ergebnisse erfassen</a>
+</nav>
+<hr>
+
 <?php foreach (array($meldung, $fehler) as $hinweis) { ?>
     <?php if ($hinweis !== '') { ?>
         <p><strong><?php echo e($hinweis); ?></strong></p>
@@ -40,9 +54,7 @@ foreach ($veranstalterModuleFiles as $moduleFile) {
 
 <?php
 $dashboardPhase = 'render';
-foreach ($veranstalterModuleFiles as $moduleFile) {
-    include $moduleFile;
-}
+include $veranstalterModuleFiles[$dashboardBereich];
 ?>
 
 <p><a href="logout.php">Logout</a></p>

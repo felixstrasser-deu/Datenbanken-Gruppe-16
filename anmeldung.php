@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
- * Include-Modul für Fahrer-Anmeldungen zu Rennen.
+ * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
+ * Include-Modul fuer Fahrer-Anmeldungen zu Rennen.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
@@ -16,7 +16,9 @@ if (($dashboardPhase ?? '') === 'process') {
         $uebersprungen = 0;
 
         if ($rennenId === false || $rennenId <= 0) {
-            $fehler = 'Bitte ein gültiges Rennen auswählen.';
+            $fehler = 'Bitte ein gueltiges Rennen auswaehlen.';
+        } elseif (!rennen_ist_zukuenftig($connection, $rennenId)) {
+            $fehler = 'Bitte ein zukuenftiges Rennen auswaehlen.';
         } else {
             foreach ($fahrerIds as $fahrerIdRaw) {
                 $fahrerId = filter_var($fahrerIdRaw, FILTER_VALIDATE_INT);
@@ -24,36 +26,16 @@ if (($dashboardPhase ?? '') === 'process') {
                     continue;
                 }
 
-                $checkStmt = mysqli_prepare($connection, 'SELECT 1 FROM Fahrer WHERE Mitarbeiter_ID = ? AND Team = ? LIMIT 1');
-                if (!$checkStmt) {
-                    $fehler = 'Fahrerprüfung konnte nicht vorbereitet werden.';
-                    break;
-                }
-
-                mysqli_stmt_bind_param($checkStmt, 'is', $fahrerId, $teamRaw);
-                mysqli_stmt_execute($checkStmt);
-                mysqli_stmt_store_result($checkStmt);
-                $fahrerOk = mysqli_stmt_num_rows($checkStmt) > 0;
-                mysqli_stmt_close($checkStmt);
-
-                if (!$fahrerOk || fahrer_ist_angemeldet($connection, $rennenId, $fahrerId)) {
-                    $uebersprungen++;
-                    continue;
-                }
-
                 if (melde_fahrer_an($connection, $rennenId, $teamRaw, $fahrerId)) {
                     $gespeichert++;
                 } else {
-                    $fehler = 'Mindestens eine Anmeldung konnte nicht gespeichert werden: ' . mysqli_error($connection);
-                    break;
+                    $uebersprungen++;
                 }
             }
 
-            if ($fehler === '') {
-                $meldung = $gespeichert . ' Fahrer wurden angemeldet.';
-                if ($uebersprungen > 0) {
-                    $meldung .= ' ' . $uebersprungen . ' Einträge wurden übersprungen.';
-                }
+            $meldung = $gespeichert . ' Fahrer wurden angemeldet.';
+            if ($uebersprungen > 0) {
+                $meldung .= ' ' . $uebersprungen . ' Eintraege wurden uebersprungen.';
             }
         }
     }
@@ -72,9 +54,10 @@ if (($dashboardPhase ?? '') === 'render') {
 <hr>
 <h3 id="anmeldung">Fahrer zu Rennen anmelden</h3>
 <form method="get" action="teamchef_dashboard.php#anmeldung">
-    <label for="anmeldung_rennen_id">Zukünftiges Rennen:</label><br>
+    <input type="hidden" name="bereich" value="anmeldung">
+    <label for="anmeldung_rennen_id">Zukuenftiges Rennen:</label><br>
     <select name="anmeldung_rennen_id" id="anmeldung_rennen_id" required>
-        <option value="">Bitte wählen</option>
+        <option value="">Bitte waehlen</option>
         <?php foreach ($anmeldungRennen as $rennenEintrag) { ?>
             <option value="<?php echo e($rennenEintrag['Renn-ID']); ?>" <?php if ((string) $anmeldungRennenId === (string) $rennenEintrag['Renn-ID']) echo 'selected'; ?>>
                 <?php echo e($rennenEintrag['Renn-ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
@@ -92,9 +75,10 @@ if (($dashboardPhase ?? '') === 'render') {
 
 <?php if ($anmeldungRennenId !== false && $anmeldungRennenId > 0 && $anmeldungAnzahl > 0) { ?>
     <?php if (count($anmeldungFahrer) === 0) { ?>
-        <p>Für dieses Team sind keine Fahrer angelegt.</p>
+        <p>Fuer dieses Team sind keine Fahrer angelegt.</p>
     <?php } else { ?>
-        <form method="post" action="teamchef_dashboard.php#anmeldung">
+        <form method="post" action="teamchef_dashboard.php?bereich=anmeldung#anmeldung">
+            <input type="hidden" name="bereich" value="anmeldung">
             <input type="hidden" name="task_action" value="anmeldung_speichern">
             <input type="hidden" name="anmeldung_rennen_id" value="<?php echo e($anmeldungRennenId); ?>">
             <table border="1" cellpadding="5" cellspacing="0">
@@ -107,7 +91,7 @@ if (($dashboardPhase ?? '') === 'render') {
                         <td><?php echo e($i + 1); ?></td>
                         <td>
                             <select name="anmeldung_fahrer[]" required>
-                                <option value="">Bitte wählen</option>
+                                <option value="">Bitte waehlen</option>
                                 <?php foreach ($anmeldungFahrer as $fahrerOption) { ?>
                                     <option value="<?php echo e($fahrerOption['Mitarbeiter_ID']); ?>">
                                         <?php echo e($fahrerOption['Mitarbeiter_ID'] . ' - ' . $fahrerOption['Name']); ?>

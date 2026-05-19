@@ -1,7 +1,7 @@
 <?php
 /*
- * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
- * Gemeinsame Hilfsfunktionen für Authentifizierung, Ausgabe und Datenbankzugriffe.
+ * Autor: Gruppe 16 - bitte fuer die Abgabe den verantwortlichen Namen ergaenzen.
+ * Gemeinsame Hilfsfunktionen fuer Authentifizierung, Ausgabe und Datenbankzugriffe.
  */
 
 function e($value)
@@ -25,64 +25,6 @@ function require_role($role)
         header('Location: index.php');
         exit;
     }
-}
-
-function sql_identifier($name)
-{
-    return '`' . str_replace('`', '``', $name) . '`';
-}
-
-function table_columns($connection, $table)
-{
-    $columns = array();
-    $result = mysqli_query($connection, 'SHOW COLUMNS FROM ' . sql_identifier($table));
-
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $columns[] = (string) $row['Field'];
-        }
-    }
-
-    return $columns;
-}
-
-function find_column($connection, $table, $preferredNames, $fallbackIndex)
-{
-    $columns = table_columns($connection, $table);
-
-    foreach ($preferredNames as $preferredName) {
-        foreach ($columns as $column) {
-            if ($column === $preferredName) {
-                return $column;
-            }
-        }
-    }
-
-    if (isset($columns[$fallbackIndex])) {
-        return $columns[$fallbackIndex];
-    }
-
-    return '';
-}
-
-function fahrer_strasse_column($connection)
-{
-    return find_column($connection, 'Fahrer', array('Strasse', 'Straße', 'StraÃŸe'), 3);
-}
-
-function rennen_hoehenmeter_column($connection)
-{
-    return find_column($connection, 'Radrennen', array('Hoehenmeter', 'Höhenmeter', 'HÃ¶henmeter'), 4);
-}
-
-function anmeldung_praemie_team_column($connection)
-{
-    return find_column($connection, 'Anmeldung', array('PraemieTeam', 'PrämieTeam', 'PrÃ¤mieTeam'), 3);
-}
-
-function anmeldung_praemie_veranstalter_column($connection)
-{
-    return find_column($connection, 'Anmeldung', array('PraemieVeranstalter', 'PrämieVeranstalter', 'PrÃ¤mieVeranstalter'), 4);
 }
 
 function team_exists($connection, $teamname)
@@ -174,35 +116,40 @@ function save_fahrer($connection, $mode, $team, $mitarbeiterId, $name, $strasse,
     }
 
     if (!$ok) {
-        return array(false, 'Stored Procedure FahrerSpeichern konnte nicht ausgeführt werden: ' . $error);
+        return array(false, 'Stored Procedure FahrerSpeichern konnte nicht ausgefuehrt werden: ' . $error);
     }
 
     $result = mysqli_query($connection, 'SELECT @fahrer_status AS status, @fahrer_meldung AS meldung');
     if (!$result || !($row = mysqli_fetch_assoc($result))) {
-        return array(false, 'Rückmeldung der Stored Procedure konnte nicht gelesen werden.');
+        return array(false, 'Rueckmeldung der Stored Procedure konnte nicht gelesen werden.');
     }
 
     return array($row['status'] === 'OK', $row['meldung']);
 }
 
-function next_rennen_id($connection)
+function create_rennen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $veranstalterName)
 {
-    $result = mysqli_query($connection, 'SELECT COALESCE(MAX(`Renn-ID`), 0) + 1 AS next_id FROM Radrennen');
-    if ($result && ($row = mysqli_fetch_assoc($result))) {
-        return (int) $row['next_id'];
-    }
-
-    return 1;
-}
-
-function fahrer_ist_angemeldet($connection, $rennenId, $mitarbeiterId)
-{
-    $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Anmeldung WHERE Radrennen = ? AND Mitarbeiter = ? LIMIT 1');
+    $sql = 'INSERT INTO Radrennen (`Datum`, `Standort`, `Kilometer`, `Höhenmeter`, `MaxSteigung`, `VName`) VALUES (?, ?, ?, ?, ?, ?)';
+    $stmt = mysqli_prepare($connection, $sql);
     if (!$stmt) {
         return false;
     }
 
-    mysqli_stmt_bind_param($stmt, 'ii', $rennenId, $mitarbeiterId);
+    mysqli_stmt_bind_param($stmt, 'ssiids', $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $veranstalterName);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+
+    return $ok;
+}
+
+function rennen_ist_zukuenftig($connection, $rennenId)
+{
+    $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Radrennen WHERE `Renn-ID` = ? AND Datum >= CURDATE() LIMIT 1');
+    if (!$stmt) {
+        return false;
+    }
+
+    mysqli_stmt_bind_param($stmt, 'i', $rennenId);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_store_result($stmt);
     $exists = mysqli_stmt_num_rows($stmt) > 0;
@@ -213,14 +160,7 @@ function fahrer_ist_angemeldet($connection, $rennenId, $mitarbeiterId)
 
 function melde_fahrer_an($connection, $rennenId, $team, $mitarbeiterId)
 {
-    $praemieTeamColumn = anmeldung_praemie_team_column($connection);
-    $praemieVeranstalterColumn = anmeldung_praemie_veranstalter_column($connection);
-
-    if ($praemieTeamColumn === '' || $praemieVeranstalterColumn === '') {
-        return false;
-    }
-
-    $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, ' . sql_identifier($praemieTeamColumn) . ', ' . sql_identifier($praemieVeranstalterColumn) . ', `Radrennen`, `Team`, `Mitarbeiter`)
+    $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, `PrämieTeam`, `PrämieVeranstalter`, `Radrennen`, `Team`, `Mitarbeiter`)
             VALUES (0, 0, 0, 0, 0, ?, ?, ?)';
     $stmt = mysqli_prepare($connection, $sql);
     if (!$stmt) {
