@@ -1,120 +1,107 @@
 <?php
 /*
  * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
- * Trainingsauswertung für Teamchefs.
+ * Include-Modul für Trainingsauswertung eines Fahrers.
  */
-session_start();
-include 'db.php';
-require 'functions.php';
-require 'TrainingStats.php';
+if (!defined('TEAMCHEF_DASHBOARD')) {
+    header('Location: teamchef_dashboard.php');
+    exit;
+}
 
-require_role('teamchef');
-mysqli_set_charset($connection, 'utf8mb4');
+if (($dashboardPhase ?? '') === 'process') {
+    $auswertungStatistik = array();
+    $auswertungFahrer = '';
+    $auswertungZiel = '';
+    $auswertungVon = '';
+    $auswertungBis = '';
 
-$team = (string) ($_SESSION['team'] ?? '');
-$ziel = '';
-$von = '';
-$bis = '';
-$fahrerId = '';
-$fehler = '';
-$statistik = array();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'auswertung_anzeigen') {
+        $auswertungFahrer = post_value('auswertung_fahrer');
+        $auswertungZiel = post_value('auswertung_trainingsziel');
+        $auswertungVon = post_value('auswertung_von');
+        $auswertungBis = post_value('auswertung_bis');
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $ziel = post_value('trainingsziel');
-    $von = post_value('von');
-    $bis = post_value('bis');
-    $fahrerId = post_value('fahrer');
-
-    if ($von !== '' && $bis !== '' && $von > $bis) {
-        $fehler = 'Das Von-Datum darf nicht nach dem Bis-Datum liegen.';
-    } else {
-        $fahrerFilter = $fahrerId !== '' ? (int) $fahrerId : null;
-        $stats = new TrainingStats($fahrerFilter, $ziel, $von, $bis);
-
-        if ($stats->loadFromDatabase($connection, $team)) {
-            $statistik = $stats->getMonatsStatistik();
+        if ($auswertungFahrer === '') {
+            $fehler = 'Bitte einen Fahrer für die Auswertung auswählen.';
+        } elseif ($auswertungVon !== '' && $auswertungBis !== '' && $auswertungVon > $auswertungBis) {
+            $fehler = 'Das Von-Datum darf nicht nach dem Bis-Datum liegen.';
         } else {
-            $fehler = 'Auswertung konnte nicht geladen werden.';
+            $stats = new TrainingStats((int) $auswertungFahrer, $auswertungZiel, $auswertungVon, $auswertungBis);
+
+            if ($stats->loadFromDatabase($connection, $teamRaw)) {
+                $auswertungStatistik = $stats->getMonatsStatistik();
+            } else {
+                $fehler = 'Auswertung konnte nicht geladen werden.';
+            }
+        }
+    }
+
+    $auswertungFahrerListe = array();
+    $fahrerStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name');
+    if ($fahrerStmt) {
+        mysqli_stmt_bind_param($fahrerStmt, 's', $teamRaw);
+        mysqli_stmt_execute($fahrerStmt);
+        mysqli_stmt_bind_result($fahrerStmt, $fahrerId, $fahrerName);
+
+        while (mysqli_stmt_fetch($fahrerStmt)) {
+            $auswertungFahrerListe[] = array('Mitarbeiter_ID' => $fahrerId, 'Name' => $fahrerName);
+        }
+
+        mysqli_stmt_close($fahrerStmt);
+    }
+
+    $auswertungZiele = array();
+    $zielResult = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
+    if ($zielResult) {
+        while ($row = mysqli_fetch_assoc($zielResult)) {
+            $auswertungZiele[] = $row['Trainingsziel'];
         }
     }
 }
 
-$fahrer = array();
-$fahrerStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name');
-if ($fahrerStmt) {
-    mysqli_stmt_bind_param($fahrerStmt, 's', $team);
-    mysqli_stmt_execute($fahrerStmt);
-    mysqli_stmt_bind_result($fahrerStmt, $dbFahrerId, $dbFahrerName);
-
-    while (mysqli_stmt_fetch($fahrerStmt)) {
-        $fahrer[] = array('Mitarbeiter_ID' => $dbFahrerId, 'Name' => $dbFahrerName);
-    }
-
-    mysqli_stmt_close($fahrerStmt);
-}
-
-$trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
+if (($dashboardPhase ?? '') === 'render') {
 ?>
+<hr>
+<h3 id="auswertung">Auswertung anzeigen</h3>
+<form method="post" action="teamchef_dashboard.php#auswertung">
+    <input type="hidden" name="task_action" value="auswertung_anzeigen">
 
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Auswertung</title>
-</head>
-<body>
-
-<h2>Auswertung</h2>
-<p>Team: <?php echo e($team); ?></p>
-
-<?php if ($fehler != '') { ?>
-    <p style="color: red;"><?php echo e($fehler); ?></p>
-<?php } ?>
-
-<form method="post" action="auswertung.php">
-    <label for="fahrer">Fahrer:</label><br>
-    <select name="fahrer" id="fahrer">
-        <option value="">Alle Teamfahrer</option>
-        <?php foreach ($fahrer as $row) { ?>
-            <option value="<?php echo e($row['Mitarbeiter_ID']); ?>" <?php if ((string) $fahrerId === (string) $row['Mitarbeiter_ID']) echo 'selected'; ?>>
-                <?php echo e($row['Mitarbeiter_ID'] . ' - ' . $row['Name']); ?>
+    <label for="auswertung_fahrer">Fahrer:</label><br>
+    <select name="auswertung_fahrer" id="auswertung_fahrer" required>
+        <option value="">Bitte wählen</option>
+        <?php foreach ($auswertungFahrerListe as $fahrerOption) { ?>
+            <option value="<?php echo e($fahrerOption['Mitarbeiter_ID']); ?>" <?php if ((string) $auswertungFahrer === (string) $fahrerOption['Mitarbeiter_ID']) echo 'selected'; ?>>
+                <?php echo e($fahrerOption['Mitarbeiter_ID'] . ' - ' . $fahrerOption['Name']); ?>
             </option>
         <?php } ?>
     </select>
-
     <br><br>
 
-    <label for="trainingsziel">Trainingsziel:</label><br>
-    <select name="trainingsziel" id="trainingsziel">
+    <label for="auswertung_trainingsziel">Trainingsziel:</label><br>
+    <select name="auswertung_trainingsziel" id="auswertung_trainingsziel">
         <option value="">Alle Ziele</option>
-        <?php if ($trainingsziele) { ?>
-            <?php while ($row = mysqli_fetch_assoc($trainingsziele)) { ?>
-                <option value="<?php echo e($row['Trainingsziel']); ?>" <?php if ($ziel == $row['Trainingsziel']) echo 'selected'; ?>>
-                    <?php echo e($row['Trainingsziel']); ?>
-                </option>
-            <?php } ?>
+        <?php foreach ($auswertungZiele as $zielOption) { ?>
+            <option value="<?php echo e($zielOption); ?>" <?php if ($auswertungZiel === $zielOption) echo 'selected'; ?>>
+                <?php echo e($zielOption); ?>
+            </option>
         <?php } ?>
     </select>
-
     <br><br>
 
-    <label for="von">Von optional:</label><br>
-    <input type="date" name="von" id="von" value="<?php echo e($von); ?>">
-
+    <label for="auswertung_von">Von optional:</label><br>
+    <input type="date" name="auswertung_von" id="auswertung_von" value="<?php echo e($auswertungVon); ?>">
     <br><br>
 
-    <label for="bis">Bis optional:</label><br>
-    <input type="date" name="bis" id="bis" value="<?php echo e($bis); ?>">
-
+    <label for="auswertung_bis">Bis optional:</label><br>
+    <input type="date" name="auswertung_bis" id="auswertung_bis" value="<?php echo e($auswertungBis); ?>">
     <br><br>
 
     <button type="submit">Auswerten</button>
 </form>
 
-<?php if ($_SERVER['REQUEST_METHOD'] == 'POST' && $fehler == '') { ?>
-    <h3>Ergebnis</h3>
-
-    <?php if (count($statistik) == 0) { ?>
+<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'auswertung_anzeigen' && $fehler === '') { ?>
+    <h4>Ergebnis</h4>
+    <?php if (count($auswertungStatistik) === 0) { ?>
         <p>Keine Trainings gefunden.</p>
     <?php } else { ?>
         <table border="1" cellpadding="5" cellspacing="0">
@@ -130,8 +117,7 @@ $trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainings
                 <th>75%-Quantil</th>
                 <th>Standardabweichung</th>
             </tr>
-
-            <?php foreach ($statistik as $monat => $werte) { ?>
+            <?php foreach ($auswertungStatistik as $monat => $werte) { ?>
                 <tr>
                     <td><?php echo e($monat); ?></td>
                     <td><?php echo e($werte['anzahl']); ?></td>
@@ -148,8 +134,4 @@ $trainingsziele = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainings
         </table>
     <?php } ?>
 <?php } ?>
-
-<p><a href="training.php">Training erfassen</a></p>
-<p><a href="teamchef_dashboard.php">Zurück zum Dashboard</a></p>
-</body>
-</html>
+<?php } ?>

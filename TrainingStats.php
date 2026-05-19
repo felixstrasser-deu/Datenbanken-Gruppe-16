@@ -44,16 +44,14 @@ class TrainingStats
 
     public function loadFromDatabase($connection, $team)
     {
-        $this->monatswerte = array();
-        $bedingungen = array('Fahrer.Team = ?');
-        $typen = 's';
-        $werte = array($team);
-
-        if ($this->fahrerId !== null && $this->fahrerId !== '') {
-            $bedingungen[] = 'Training.Mitarbeiter = ?';
-            $typen .= 'i';
-            $werte[] = (int) $this->fahrerId;
+        if ($this->fahrerId === null || $this->fahrerId === '') {
+            return false;
         }
+
+        $this->monatswerte = array();
+        $bedingungen = array('Fahrer.Team = ?', 'Training.Mitarbeiter = ?');
+        $typen = 'si';
+        $werte = array($team, (int) $this->fahrerId);
 
         if ($this->trainingsziel !== '') {
             $bedingungen[] = 'Training.Trainingsziel = ?';

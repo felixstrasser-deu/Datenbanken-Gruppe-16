@@ -233,4 +233,59 @@ function melde_fahrer_an($connection, $rennenId, $team, $mitarbeiterId)
 
     return $ok;
 }
+
+function fahrer_liste_fuer_team($connection, $team)
+{
+    $fahrer = array();
+    $stmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name');
+    if (!$stmt) {
+        return $fahrer;
+    }
+
+    mysqli_stmt_bind_param($stmt, 's', $team);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_result($stmt, $fahrerId, $fahrerName);
+
+    while (mysqli_stmt_fetch($stmt)) {
+        $fahrer[] = array('Mitarbeiter_ID' => $fahrerId, 'Name' => $fahrerName);
+    }
+
+    mysqli_stmt_close($stmt);
+    return $fahrer;
+}
+
+function trainingsziel_liste($connection)
+{
+    $ziele = array();
+    $result = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
+
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $ziele[] = $row['Trainingsziel'];
+        }
+    }
+
+    return $ziele;
+}
+
+function rennen_liste($connection, $nurZukuenftig)
+{
+    $rennen = array();
+    $sql = 'SELECT `Renn-ID`, Datum, Standort FROM Radrennen';
+
+    if ($nurZukuenftig) {
+        $sql .= ' WHERE Datum >= CURDATE() ORDER BY Datum ASC, `Renn-ID` ASC';
+    } else {
+        $sql .= ' ORDER BY Datum DESC, `Renn-ID` DESC';
+    }
+
+    $result = mysqli_query($connection, $sql);
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $rennen[] = $row;
+        }
+    }
+
+    return $rennen;
+}
 ?>

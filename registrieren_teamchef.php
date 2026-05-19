@@ -1,81 +1,87 @@
 <?php
 /*
  * Autor: Gruppe 16 - bitte für die Abgabe den verantwortlichen Namen ergänzen.
- * Alternative Registrierungsseite für ein neues Team mit Teamchef.
+ * Registrierungs-Baustein für Team und Teamchef.
  */
-session_start();
-require 'db.php';
-require 'functions.php';
+$direktaufruf = !defined('INDEX_PAGE');
 
-mysqli_set_charset($connection, 'utf8mb4');
+if ($direktaufruf) {
+    session_start();
+    require 'db.php';
+    require 'functions.php';
+    mysqli_set_charset($connection, 'utf8mb4');
+    $indexPhase = 'process';
+}
 
-$meldung = '';
-$fehler = '';
-$teamname = post_value('teamname');
-$loginname = post_value('loginname');
-$name = post_value('name');
-$vorname = post_value('vorname');
+$teamchefRegTeam = ($_POST['form_typ'] ?? '') === 'teamchef_reg' ? post_value('teamname') : '';
+$teamchefRegLoginname = ($_POST['form_typ'] ?? '') === 'teamchef_reg' ? post_value('loginname') : '';
+$teamchefRegName = ($_POST['form_typ'] ?? '') === 'teamchef_reg' ? post_value('name') : '';
+$teamchefRegVorname = ($_POST['form_typ'] ?? '') === 'teamchef_reg' ? post_value('vorname') : '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_typ'] ?? '') === 'teamchef_reg') {
     $kennwort = post_value('kennwort');
 
-    if ($teamname === '' || $loginname === '' || $name === '' || $vorname === '' || $kennwort === '') {
-        $fehler = 'Bitte alle Felder ausfüllen.';
-    } elseif (team_exists($connection, $teamname)) {
-        $fehler = 'Dieses Team existiert bereits.';
-    } elseif (loginname_exists($connection, $loginname)) {
-        $fehler = 'Dieser Loginname existiert bereits.';
-    } elseif (create_team_with_chef($connection, $teamname, $loginname, $name, $vorname, $kennwort)) {
-        $meldung = 'Team und Teamchef wurden registriert.';
-        $teamname = '';
-        $loginname = '';
-        $name = '';
-        $vorname = '';
+    if ($teamchefRegTeam === '' || $teamchefRegLoginname === '' || $teamchefRegName === '' || $teamchefRegVorname === '' || $kennwort === '') {
+        $teamchefRegFehler = 'Bitte alle Felder ausfüllen.';
+    } elseif (strlen($teamchefRegTeam) > 46 || strlen($teamchefRegLoginname) > 46 || strlen($teamchefRegName) > 46 || strlen($teamchefRegVorname) > 46) {
+        $teamchefRegFehler = 'Textfelder dürfen maximal 46 Zeichen lang sein.';
+    } elseif (team_exists($connection, $teamchefRegTeam)) {
+        $teamchefRegFehler = 'Dieses Team existiert bereits.';
+    } elseif (loginname_exists($connection, $teamchefRegLoginname)) {
+        $teamchefRegFehler = 'Dieser Loginname existiert bereits.';
+    } elseif (create_team_with_chef($connection, $teamchefRegTeam, $teamchefRegLoginname, $teamchefRegName, $teamchefRegVorname, $kennwort)) {
+        $_SESSION['rolle'] = 'teamchef';
+        $_SESSION['loginname'] = $teamchefRegLoginname;
+        $_SESSION['team'] = $teamchefRegTeam;
+
+        header('Location: teamchef_dashboard.php');
+        exit;
     } else {
-        $fehler = 'Registrierung konnte nicht gespeichert werden: ' . mysqli_error($connection);
+        $teamchefRegFehler = 'Registrierung konnte nicht gespeichert werden: ' . mysqli_error($connection);
     }
 }
+
+if ($direktaufruf) {
+    header('Location: index.php');
+    exit;
+}
+
+if (($indexPhase ?? '') === 'render') {
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Teamchef registrieren</title>
-</head>
-<body>
-<h1>Teamchef registrieren</h1>
-
-<?php if ($meldung !== '') { ?>
-    <p style="color: green;"><?php echo e($meldung); ?></p>
-<?php } ?>
-<?php if ($fehler !== '') { ?>
-    <p style="color: red;"><?php echo e($fehler); ?></p>
+<?php if ($teamchefRegFehler !== '') { ?>
+    <p><strong><?php echo e($teamchefRegFehler); ?></strong></p>
 <?php } ?>
 
-<form method="post" action="registrieren_teamchef.php">
-    <label for="teamname">Teamname:</label><br>
-    <input type="text" name="teamname" id="teamname" maxlength="46" value="<?php echo e($teamname); ?>" required>
+<form method="post" action="index.php">
+    <input type="hidden" name="form_typ" value="teamchef_reg">
+
+    <label for="reg_team">Teamname:</label><br>
+    <input type="text" name="teamname" id="reg_team" maxlength="46" value="<?php echo e($teamchefRegTeam); ?>" required>
+
     <br><br>
 
-    <label for="loginname">Loginname:</label><br>
-    <input type="text" name="loginname" id="loginname" maxlength="46" value="<?php echo e($loginname); ?>" required>
+    <label for="reg_loginname">Loginname:</label><br>
+    <input type="text" name="loginname" id="reg_loginname" maxlength="46" value="<?php echo e($teamchefRegLoginname); ?>" required>
+
     <br><br>
 
-    <label for="name">Name:</label><br>
-    <input type="text" name="name" id="name" maxlength="46" value="<?php echo e($name); ?>" required>
+    <label for="reg_name">Name:</label><br>
+    <input type="text" name="name" id="reg_name" maxlength="46" value="<?php echo e($teamchefRegName); ?>" required>
+
     <br><br>
 
-    <label for="vorname">Vorname:</label><br>
-    <input type="text" name="vorname" id="vorname" maxlength="46" value="<?php echo e($vorname); ?>" required>
+    <label for="reg_vorname">Vorname:</label><br>
+    <input type="text" name="vorname" id="reg_vorname" maxlength="46" value="<?php echo e($teamchefRegVorname); ?>" required>
+
     <br><br>
 
-    <label for="kennwort">Passwort:</label><br>
-    <input type="password" name="kennwort" id="kennwort" required>
+    <label for="reg_passwort">Passwort:</label><br>
+    <input type="password" name="kennwort" id="reg_passwort" required>
+
     <br><br>
 
     <button type="submit">Registrieren</button>
 </form>
-
-<p><a href="index.php">Zur Startseite</a></p>
-</body>
-</html>
+<?php
+}
+?>
