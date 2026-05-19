@@ -303,7 +303,7 @@ $letzteTrainings = mysqli_query(
 
                 <br><br>
 
-                <button type="submit">Veranstalter Login</button>
+                <button type="submit">Login</button>
             </form>
         </td>
 
