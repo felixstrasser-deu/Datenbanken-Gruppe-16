@@ -17,7 +17,7 @@ if (($dashboardPhase ?? '') === 'process') {
 
         if ($rennenId === false || $rennenId <= 0) {
             $fehler = 'Bitte ein gültiges Rennen auswählen.';
-        } elseif (!rennen_ist_zukuenftig($connection, $rennenId)) {
+        } elseif (!zukuenftigeRennen($connection, $rennenId)) {
             $fehler = 'Bitte ein zukünftiges Rennen auswählen.';
         } else {
             foreach ($fahrerIds as $fahrerIdRaw) {
@@ -26,7 +26,7 @@ if (($dashboardPhase ?? '') === 'process') {
                     continue;
                 }
 
-                if (melde_fahrer_an($connection, $rennenId, $teamRaw, $fahrerId)) {
+                if (fahrerAnmelden($connection, $rennenId, $teamRaw, $fahrerId)) {
                     $gespeichert++;
                 } else {
                     $uebersprungen++;
@@ -40,8 +40,8 @@ if (($dashboardPhase ?? '') === 'process') {
         }
     }
 
-    $anmeldungFahrer = fahrer_liste_fuer_team($connection, $teamRaw);
-    $anmeldungRennen = rennen_liste($connection, true);
+    $anmeldungFahrer = fahrerZuTeam($connection, $teamRaw);
+    $anmeldungRennen = listeRennen($connection, true);
     $anmeldungRennenId = filter_var(get_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
     $anmeldungAnzahl = filter_var(get_value('anmeldung_anzahl'), FILTER_VALIDATE_INT);
     if ($anmeldungAnzahl === false || $anmeldungAnzahl < 1) {

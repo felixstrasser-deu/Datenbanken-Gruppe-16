@@ -31,7 +31,7 @@ function require_role($role)
 }
 
 /*Felix Straßer*/
-function team_exists($connection, $teamname)
+function teamExistiert($connection, $teamname)
 {
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Team WHERE Teamname = ? LIMIT 1');
     if (!$stmt) {
@@ -48,7 +48,7 @@ function team_exists($connection, $teamname)
 }
 
 /*Felix Straßer*/
-function loginname_exists($connection, $loginname)
+function loginnameExistiert($connection, $loginname)
 {
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Teamchef WHERE Loginname = ? LIMIT 1');
     if (!$stmt) {
@@ -65,7 +65,7 @@ function loginname_exists($connection, $loginname)
 }
 
 /*Felix Straßer*/
-function create_team_with_chef($connection, $teamname, $loginname, $name, $vorname, $kennwort)
+function teamMitTeamchefErstellen($connection, $teamname, $loginname, $name, $vorname, $kennwort)
 {
     mysqli_begin_transaction($connection);
 
@@ -105,7 +105,7 @@ function create_team_with_chef($connection, $teamname, $loginname, $name, $vorna
 }
 
 /*Felix Straßer*/
-function save_fahrer($connection, $mode, $team, $mitarbeiterId, $name, $strasse, $hausnr, $plz, $ort, $telnr)
+function fahrerSpeichern($connection, $mode, $team, $mitarbeiterId, $name, $strasse, $hausnr, $plz, $ort, $telnr)
 {
     $sql = 'CALL FahrerSpeichern(?, ?, ?, ?, ?, ?, ?, ?, ?, @fahrer_status, @fahrer_meldung)';
     $stmt = mysqli_prepare($connection, $sql);
@@ -135,7 +135,7 @@ function save_fahrer($connection, $mode, $team, $mitarbeiterId, $name, $strasse,
 }
 
 /*Johnny Germar*/
-function create_rennen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $veranstalterName)
+function rennenErstellen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $veranstalterName)
 {
     $sql = 'INSERT INTO Radrennen (`Datum`, `Standort`, `Kilometer`, `Hoehenmeter`, `MaxSteigung`, `VName`) VALUES (?, ?, ?, ?, ?, ?)';
     $stmt = mysqli_prepare($connection, $sql);
@@ -151,7 +151,7 @@ function create_rennen($connection, $datum, $standort, $kilometer, $hoehenmeter,
 }
 
 /*Johnny Germar*/
-function rennen_ist_zukuenftig($connection, $rennenId)
+function zukuenftigeRennen($connection, $rennenId)
 {
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Radrennen WHERE `Renn_ID` = ? AND Datum > CURDATE() LIMIT 1');
     if (!$stmt) {
@@ -168,7 +168,7 @@ function rennen_ist_zukuenftig($connection, $rennenId)
 }
 
 /*Johnny Germar*/
-function melde_fahrer_an($connection, $rennenId, $team, $mitarbeiterId)
+function fahrerAnmelden($connection, $rennenId, $team, $mitarbeiterId)
 {
     $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, `PraemieTeam`, `PraemieVeranstalter`, `Radrennen`, `Team`, `Mitarbeiter`)
             VALUES (0, 0, 0, 0, 0, ?, ?, ?)';
@@ -185,7 +185,7 @@ function melde_fahrer_an($connection, $rennenId, $team, $mitarbeiterId)
 }
 
 /*Johnny Germar*/
-function fahrer_liste_fuer_team($connection, $team)
+function fahrerZuTeam($connection, $team)
 {
     $fahrer = array();
     $stmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name');
@@ -205,23 +205,8 @@ function fahrer_liste_fuer_team($connection, $team)
     return $fahrer;
 }
 
-/*Magdalena Hamm*/
-function trainingsziel_liste($connection)
-{
-    $ziele = array();
-    $result = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
-
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $ziele[] = $row['Trainingsziel'];
-        }
-    }
-
-    return $ziele;
-}
-
 /*Johnny Germar*/
-function rennen_liste($connection, $nurZukuenftig)
+function listeRennen($connection, $nurZukuenftig)
 {
     $rennen = array();
     $sql = 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen';

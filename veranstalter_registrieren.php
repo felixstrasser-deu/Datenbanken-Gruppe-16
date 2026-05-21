@@ -51,7 +51,7 @@ if (($indexPhase ?? '') === 'render') {
     <input type="hidden" name="form_typ" value="veranstalter_reg">
 
     <label for="veranstalter_reg_name">Name:</label><br>
-    <input type="text" name="name" id="veranstalter_reg_name" maxlength="46" value="<?php echo e($veranstalterRegName); ?>" required>
+    <input type="text" name="name" id="veranstalter_reg_name" maxlength="50" value="<?php echo e($veranstalterRegName); ?>" required>
     <br><br>
 
     <label for="veranstalter_reg_passwort">Passwort:</label><br>

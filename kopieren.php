@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Johnny Germar
+ * Autor: Felix Straßer
  * Include-Modul zum Kopieren von Anmeldungen.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
@@ -17,7 +17,7 @@ if (($dashboardPhase ?? '') === 'process') {
             $fehler = 'Bitte Quell- und Zielrennen auswählen.';
         } elseif ($quelle === $ziel) {
             $fehler = 'Quelle und Ziel müssen unterschiedliche Rennen sein.';
-        } elseif (!rennen_ist_zukuenftig($connection, $ziel)) {
+        } elseif (!zukuenftigeRennen($connection, $ziel)) {
             $fehler = 'Das Zielrennen muss ein zukünftiges Rennen sein.';
         } else {
             $sourceStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter FROM Anmeldung WHERE Radrennen = ? AND Team = ? ORDER BY Startnummer');
@@ -40,7 +40,7 @@ if (($dashboardPhase ?? '') === 'process') {
                     $uebersprungen = 0;
 
                     foreach ($fahrerIds as $fahrerId) {
-                        if (melde_fahrer_an($connection, $ziel, $teamRaw, $fahrerId)) {
+                        if (fahrerAnmelden($connection, $ziel, $teamRaw, $fahrerId)) {
                             $kopiert++;
                         } else {
                             $uebersprungen++;
@@ -69,7 +69,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 
     $kopierenZielRennen = array();
-    $zielRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum ASC, `Renn_ID` ASC');
+    $zielRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum, `Renn_ID');
     if ($zielRennenResult) {
         while ($row = mysqli_fetch_assoc($zielRennenResult)) {
             $kopierenZielRennen[] = $row;

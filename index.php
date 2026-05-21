@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Johnny
+ * Autor: Johnny Germar
  * Startseite mit eingebundenen Login- und Registrierungsbereichen.
  */
 session_start();

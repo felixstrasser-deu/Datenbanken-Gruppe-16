@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Felix Strasser
+ * Autor: Felix Straßer
  * Include-Modul für Fahrer anlegen, ändern, löschen und anzeigen.
  */
 if (!defined('TEAMCHEF_DASHBOARD')) {
@@ -57,12 +57,6 @@ if (($dashboardPhase ?? '') === 'process') {
                 }
             }
 
-            foreach (array('name', 'strasse', 'hausnr', 'ort', 'telnr') as $feld) {
-                if (strlen($form[$feld]) > 46) {
-                    $errors[] = 'Textfelder dürfen maximal 46 Zeichen lang sein.';
-                    break;
-                }
-            }
 
             if (!preg_match('/^[0-9]{1,5}$/', $form['plz'])) {
                 $errors[] = 'PLZ muss aus maximal 5 Ziffern bestehen.';
@@ -78,7 +72,7 @@ if (($dashboardPhase ?? '') === 'process') {
             }
 
             if (count($errors) === 0) {
-                list($ok, $message) = save_fahrer($connection, $formMode, $teamRaw, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $form['plz'], $form['ort'], $form['telnr']);
+                list($ok, $message) = fahrerSpeichern($connection, $formMode, $teamRaw, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $form['plz'], $form['ort'], $form['telnr']);
                 if ($ok || $message === 'Mitarbeiter-ID ist bereits vergeben.') {
                     $status = $ok ? ($formMode === 'create' ? 'created' : 'updated') : 'exists';
                     header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . $status);
@@ -124,12 +118,12 @@ if (($dashboardPhase ?? '') === 'process') {
 if (($dashboardPhase ?? '') === 'render') {
 $inputs = array(
     'mitarbeiter_id' => array('Mitarbeiter-ID', 'number', '1', ''),
-    'name' => array('Name', 'text', '', '46'),
-    'strasse' => array('Straße', 'text', '', '46'),
-    'hausnr' => array('Hausnummer', 'text', '', '46'),
+    'name' => array('Name', 'text', '', '50'),
+    'strasse' => array('Straße', 'text', '', '50'),
+    'hausnr' => array('Hausnummer', 'text', '', '50'),
     'plz' => array('PLZ', 'text', '', '5'),
-    'ort' => array('Ort', 'text', '', '46'),
-    'telnr' => array('Telefon', 'text', '', '46'),
+    'ort' => array('Ort', 'text', '', '50'),
+    'telnr' => array('Telefon', 'text', '', '50'),
 );
 ?>
 <h3 id="fahrerformular">Fahrer anlegen / bearbeiten</h3>

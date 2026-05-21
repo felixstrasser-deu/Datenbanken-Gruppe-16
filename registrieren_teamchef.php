@@ -1,6 +1,6 @@
 <?php
 /*
- * Autor: Felix Strasser
+ * Autor: Felix Straßer
  * Registrierungs-Baustein für Team und Teamchef.
  */
 if (!defined('INDEX_PAGE')) {
@@ -20,13 +20,11 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
 
     if (in_array('', $werte, true)) {
         $teamchefRegFehler = 'Bitte alle Felder ausfüllen.';
-    } elseif (max(array_map('strlen', array_slice($werte, 0, 4))) > 46) {
-        $teamchefRegFehler = 'Textfelder dürfen maximal 46 Zeichen lang sein.';
-    } elseif (team_exists($connection, $teamchefRegTeam)) {
+    } elseif (teamExistiert($connection, $teamchefRegTeam)) {
         $teamchefRegFehler = 'Dieses Team existiert bereits.';
-    } elseif (loginname_exists($connection, $teamchefRegLoginname)) {
+    } elseif (loginnameExistiert($connection, $teamchefRegLoginname)) {
         $teamchefRegFehler = 'Dieser Loginname existiert bereits.';
-    } elseif (!create_team_with_chef($connection, $teamchefRegTeam, $teamchefRegLoginname, $teamchefRegName, $teamchefRegVorname, $kennwort)) {
+    } elseif (!teamMitTeamchefErstellen($connection, $teamchefRegTeam, $teamchefRegLoginname, $teamchefRegName, $teamchefRegVorname, $kennwort)) {
         $teamchefRegFehler = 'Registrierung konnte nicht gespeichert werden: ' . mysqli_error($connection);
     } else {
         $_SESSION['rolle'] = 'teamchef';
@@ -54,7 +52,7 @@ $felder = array(
 
     <?php foreach ($felder as $feld) { ?>
         <label for="<?php echo e($feld[0]); ?>"><?php echo e($feld[2]); ?>:</label><br>
-        <input type="text" name="<?php echo e($feld[1]); ?>" id="<?php echo e($feld[0]); ?>" maxlength="46" value="<?php echo e($feld[3]); ?>" required>
+        <input type="text" name="<?php echo e($feld[1]); ?>" id="<?php echo e($feld[0]); ?>" maxlength="50" value="<?php echo e($feld[3]); ?>" required>
         <br><br>
     <?php } ?>
 

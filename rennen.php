@@ -20,10 +20,10 @@ if (($dashboardPhase ?? '') === 'process') {
             $fehler = 'Bitte alle Renndaten gültig ausfüllen.';
         } elseif ($kilometer <= 0 || $hoehenmeter < 0 || $maxSteigung < 0) {
             $fehler = 'Kilometer muss größer 0 sein; Höhenmeter und Steigung dürfen nicht negativ sein.';
-        } elseif (strlen($standort) > 46) {
-            $fehler = 'Der Standort darf maximal 46 Zeichen lang sein.';
+        } elseif (strlen($standort) > 50) {
+            $fehler = 'Der Standort darf maximal 50 Zeichen lang sein.';
         } else {
-            if (create_rennen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $nameRaw)) {
+            if (rennenErstellen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $nameRaw)) {
                 $meldung = 'Rennen wurde gespeichert.';
             } else {
                 $fehler = 'Rennen konnte nicht gespeichert werden: ' . mysqli_error($connection);
@@ -57,7 +57,7 @@ if (($dashboardPhase ?? '') === 'render') {
     <br><br>
 
     <label for="standort">Startort:</label><br>
-    <input type="text" name="standort" id="standort" maxlength="46" required>
+    <input type="text" name="standort" id="standort" maxlength="50" required>
     <br><br>
 
     <label for="kilometer">Kilometer:</label><br>
