@@ -12,6 +12,7 @@ require_role('teamchef');
 mysqli_set_charset($connection, 'utf8mb4');
 
 $teamRaw = (string) ($_SESSION['team'] ?? '');
+$team = $teamRaw;
 $meldung = '';
 $fehler = '';
 $taskAction = post_value('task_action');

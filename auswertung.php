@@ -1,13 +1,19 @@
 <?php
 /*
  * Autor: Magdalena Hamm
- * Include-Modul für die Trainingsauswertung aller Teamfahrer.
+ * Dieses Modul besteht aus zwei Teilen:
+ * In der process-Phase werden Fahrer, Trainingsziele und bei Bedarf Statistiken geladen.
+ * In der render-Phase werden Formular und Ergebnis-Tabelle ausgegeben.
  */
+
+// Schutz vor direktem Aufruf: Das Modul darf nur über das Teamchef-Dashboard geladen werden.
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
     exit;
 }
 
+// In der process-Phase werden benötigte Daten geladen und Formularaktionen verarbeitet.
+// Standardwerte für Formularfilter und spätere Auswertung initialisieren.
 if (($dashboardPhase ?? '') === 'process') {
     $auswertungStatistiken = array();
     $auswertungZiel = '';
@@ -15,8 +21,11 @@ if (($dashboardPhase ?? '') === 'process') {
     $auswertungBis = '';
     $auswertungWurdeAngefordert = false;
 
+    // Alle Fahrer des aktuellen Teams laden, damit für jeden Fahrer eine Statistik berechnet werden kann.
     $auswertungFahrerListe = array();
     $fahrerStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name');
+    
+    // Fahrer des Teams per Prepared Statement laden und als Array für die spätere Auswertung speichern.
     if ($fahrerStmt) {
         mysqli_stmt_bind_param($fahrerStmt, 's', $teamRaw);
         mysqli_stmt_execute($fahrerStmt);
@@ -29,6 +38,7 @@ if (($dashboardPhase ?? '') === 'process') {
         mysqli_stmt_close($fahrerStmt);
     }
 
+    // Trainingsziele für das Auswahlfeld laden.
     $auswertungZiele = array();
     $zielResult = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
     if ($zielResult) {
@@ -37,18 +47,23 @@ if (($dashboardPhase ?? '') === 'process') {
         }
     }
 
+    // Vom Benutzer gesetzte Filter aus dem Formular übernehmen.
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'auswertung_anzeigen') {
         $auswertungWurdeAngefordert = true;
         $auswertungZiel = post_value('auswertung_trainingsziel');
         $auswertungVon = post_value('auswertung_von');
         $auswertungBis = post_value('auswertung_bis');
 
+        // Ungültigen Zeitraum verhindern: Startdatum darf nicht nach dem Enddatum liegen.
         if ($auswertungVon !== '' && $auswertungBis !== '' && $auswertungVon > $auswertungBis) {
             $fehler = 'Das Von-Datum darf nicht nach dem Bis-Datum liegen.';
         } else {
+
+            // Für jeden Fahrer ein Statistikobjekt mit den gewählten Filtern erstellen.
             foreach ($auswertungFahrerListe as $fahrerEintrag) {
                 $stats = new TrainingStats((int) $fahrerEintrag['Mitarbeiter_ID'], $auswertungZiel, $auswertungVon, $auswertungBis);
 
+                // Berechnete Monatsstatistik zusammen mit den Fahrerdaten für die Ausgabe speichern.
                 if (!$stats->loadFromDatabase($connection, $teamRaw)) {
                     $fehler = 'Auswertung konnte nicht geladen werden.';
                     break;
@@ -63,14 +78,18 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 }
 
+// In der render-Phase wird das Formular und bei Bedarf die Ergebnis-Tabelle ausgegeben.
 if (($dashboardPhase ?? '') === 'render') {
 ?>
 <hr>
 <h3 id="auswertung">Auswertung anzeigen</h3>
+
+<!-- Versteckte Steuerfelder, damit das Dashboard erkennt, welches Modul verarbeitet werden soll. -->
 <form method="post" action="teamchef_dashboard.php?bereich=auswertung#auswertung">
     <input type="hidden" name="bereich" value="auswertung">
     <input type="hidden" name="task_action" value="auswertung_anzeigen">
 
+    <!-- Trainingsziele dynamisch aus der Datenbank als Auswahloptionen anzeigen. -->
     <label for="auswertung_trainingsziel">Trainingsziel:</label><br>
     <select name="auswertung_trainingsziel" id="auswertung_trainingsziel">
         <option value="">Alle Ziele</option>
@@ -82,6 +101,7 @@ if (($dashboardPhase ?? '') === 'render') {
     </select>
     <br><br>
 
+    <!-- Optionale Datumsfilter anzeigen und bereits eingegebene Werte wieder einsetzen. -->
     <label for="auswertung_von">Von optional:</label><br>
     <input type="date" name="auswertung_von" id="auswertung_von" value="<?php echo e($auswertungVon); ?>">
     <br><br>
@@ -90,11 +110,14 @@ if (($dashboardPhase ?? '') === 'render') {
     <input type="date" name="auswertung_bis" id="auswertung_bis" value="<?php echo e($auswertungBis); ?>">
     <br><br>
 
+    <!-- Ergebnis nur anzeigen, nachdem das Formular erfolgreich abgeschickt wurde. -->
     <button type="submit">Auswerten</button>
 </form>
 
 <?php if ($auswertungWurdeAngefordert && $fehler === '') { ?>
     <h4>Ergebnis</h4>
+
+    <!-- Prüfen, ob mindestens ein Fahrer Trainingsdaten für die gewählten Filter hat. -->
     <?php
     $hatTrainingswerte = false;
     foreach ($auswertungStatistiken as $fahrerStatistik) {
@@ -106,6 +129,8 @@ if (($dashboardPhase ?? '') === 'render') {
     ?>
     <?php if (!$hatTrainingswerte) { ?>
         <p>Keine Trainings gefunden.</p>
+
+    <!-- Für jeden Fahrer und jeden vorhandenen Trainingsmonat eine Tabellenzeile ausgeben. -->
     <?php } else { ?>
         <table border="1" cellpadding="5" cellspacing="0">
             <tr>
@@ -123,6 +148,8 @@ if (($dashboardPhase ?? '') === 'render') {
             </tr>
             <?php foreach ($auswertungStatistiken as $fahrerStatistik) { ?>
                 <?php foreach ($fahrerStatistik['monate'] as $monat => $werte) { ?>
+
+                    <!-- Statistische Kennzahlen mit zwei Nachkommastellen im deutschen Zahlenformat ausgeben. -->
                     <tr>
                         <td><?php echo e($fahrerStatistik['fahrer']['Mitarbeiter_ID'] . ' - ' . $fahrerStatistik['fahrer']['Name']); ?></td>
                         <td><?php echo e($monat); ?></td>

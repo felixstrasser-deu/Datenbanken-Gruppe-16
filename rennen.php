@@ -3,6 +3,8 @@
  * Autor: Johnny Germar
  * Include-Modul für Rennen verwalten und anlegen.
  */
+
+// Schutz vor direktem Aufruf: Das Modul darf nur über das Veranstalter-Dashboard geladen werden.
 if (!defined('VERANSTALTER_DASHBOARD')) {
     header('Location: veranstalter_dashboard.php');
     exit;

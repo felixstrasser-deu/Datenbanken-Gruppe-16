@@ -3,6 +3,8 @@
  * Autor: Johnny Germar
  * Include-Modul für Fahrer-Anmeldungen zu Rennen.
  */
+
+// Schutz vor direktem Aufruf: Das Modul darf nur über das Teamchef-Dashboard geladen werden.
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
     exit;
@@ -26,7 +28,7 @@ if (($dashboardPhase ?? '') === 'process') {
                     continue;
                 }
 
-                if (fahrerAnmelden($connection, $rennenId, $teamRaw, $fahrerId)) {
+                if (fahrerAnmelden($connection, $rennenId, $team, $fahrerId)) {
                     $gespeichert++;
                 } else {
                     $uebersprungen++;
@@ -40,7 +42,7 @@ if (($dashboardPhase ?? '') === 'process') {
         }
     }
 
-    $anmeldungFahrer = fahrerZuTeam($connection, $teamRaw);
+    $anmeldungFahrer = fahrerZuTeam($connection, $team);
     $anmeldungRennen = listeRennen($connection, true);
     $anmeldungRennenId = filter_var(get_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
     $anmeldungAnzahl = filter_var(get_value('anmeldung_anzahl'), FILTER_VALIDATE_INT);
@@ -77,7 +79,7 @@ if (($dashboardPhase ?? '') === 'render') {
     <?php if (count($anmeldungFahrer) === 0) { ?>
         <p>Für dieses Team sind keine Fahrer angelegt.</p>
     <?php } else { ?>
-        <form method="post" action="teamchef_dashboard.php?bereich=anmeldung#anmeldung">
+        <form method="post" action="teamchef_dashboard.php#anmeldung">
             <input type="hidden" name="bereich" value="anmeldung">
             <input type="hidden" name="task_action" value="anmeldung_speichern">
             <input type="hidden" name="anmeldung_rennen_id" value="<?php echo e($anmeldungRennenId); ?>">

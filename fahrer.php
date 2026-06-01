@@ -31,7 +31,7 @@ if (($dashboardPhase ?? '') === 'process') {
             $deleteStmt = $deleteId > 0 ? mysqli_prepare($connection, 'DELETE FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ?') : false;
 
             if ($deleteStmt) {
-                mysqli_stmt_bind_param($deleteStmt, 'is', $deleteId, $teamRaw);
+                mysqli_stmt_bind_param($deleteStmt, 'is', $deleteId, $team);
                 mysqli_stmt_execute($deleteStmt);
                 $status = mysqli_stmt_affected_rows($deleteStmt) > 0 ? 'deleted' : 'notfound';
                 mysqli_stmt_close($deleteStmt);
@@ -39,7 +39,7 @@ if (($dashboardPhase ?? '') === 'process') {
                 $status = 'error';
             }
 
-            header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . $status);
+            header('Location: teamchef_dashboard.php?status=' . $status . '#fahrerformular');
             exit;
         }
 
@@ -72,10 +72,10 @@ if (($dashboardPhase ?? '') === 'process') {
             }
 
             if (count($errors) === 0) {
-                list($ok, $message) = fahrerSpeichern($connection, $formMode, $teamRaw, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $form['plz'], $form['ort'], $form['telnr']);
+                list($ok, $message) = fahrerSpeichern($connection, $formMode, $team, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $form['plz'], $form['ort'], $form['telnr']);
                 if ($ok || $message === 'Mitarbeiter-ID ist bereits vergeben.') {
                     $status = $ok ? ($formMode === 'create' ? 'created' : 'updated') : 'exists';
-                    header('Location: teamchef_dashboard.php?bereich=fahrer&status=' . $status);
+                    header('Location: teamchef_dashboard.php?status=' . $status . '#fahrerformular');
                     exit;
                 }
                 $fehler = $message;
@@ -89,7 +89,7 @@ if (($dashboardPhase ?? '') === 'process') {
     if ($editId !== false && $editId > 0 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         $editStmt = mysqli_prepare($connection, 'SELECT `Mitarbeiter_ID`, `Name`, `Strasse`, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ? LIMIT 1');
         if ($editStmt) {
-            mysqli_stmt_bind_param($editStmt, 'is', $editId, $teamRaw);
+            mysqli_stmt_bind_param($editStmt, 'is', $editId, $team);
             mysqli_stmt_execute($editStmt);
             mysqli_stmt_bind_result($editStmt, $dbId, $dbName, $dbStrasse, $dbHausnr, $dbPlz, $dbOrt, $dbTelnr);
             if (mysqli_stmt_fetch($editStmt)) {
@@ -105,7 +105,7 @@ if (($dashboardPhase ?? '') === 'process') {
     $fahrer = array();
     $fahrerStmt = mysqli_prepare($connection, 'SELECT `Mitarbeiter_ID`, `Name`, `Strasse`, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Team` = ? ORDER BY `Name`');
     if ($fahrerStmt) {
-        mysqli_stmt_bind_param($fahrerStmt, 's', $teamRaw);
+        mysqli_stmt_bind_param($fahrerStmt, 's', $team);
         mysqli_stmt_execute($fahrerStmt);
         mysqli_stmt_bind_result($fahrerStmt, $dbId, $dbName, $dbStrasse, $dbHausnr, $dbPlz, $dbOrt, $dbTelnr);
         while (mysqli_stmt_fetch($fahrerStmt)) {
@@ -127,7 +127,7 @@ $inputs = array(
 );
 ?>
 <h3 id="fahrerformular">Fahrer anlegen / bearbeiten</h3>
-<form method="post" action="teamchef_dashboard.php?bereich=fahrer">
+<form method="post" action="teamchef_dashboard.php#fahrerformular">
     <input type="hidden" name="bereich" value="fahrer">
     <input type="hidden" name="fahrer_action" value="save">
     <input type="hidden" name="form_mode" value="<?php echo e($formMode); ?>">
@@ -168,7 +168,7 @@ $inputs = array(
                 <td><?php echo e($eintrag['TelNr']); ?></td>
                 <td>
                     <a href="teamchef_dashboard.php?bereich=fahrer&edit=<?php echo urlencode((string) $eintrag['Mitarbeiter_ID']); ?>">Bearbeiten</a>
-                    <form method="post" action="teamchef_dashboard.php?bereich=fahrer" style="display:inline;">
+                    <form method="post" action="teamchef_dashboard.php#fahrerformular" style="display:inline;">
                         <input type="hidden" name="bereich" value="fahrer">
                         <input type="hidden" name="fahrer_action" value="delete">
                         <input type="hidden" name="delete_mitarbeiter_id" value="<?php echo e($eintrag['Mitarbeiter_ID']); ?>">

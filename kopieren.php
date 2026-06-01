@@ -3,6 +3,8 @@
  * Autor: Felix Straßer
  * Include-Modul zum Kopieren von Anmeldungen.
  */
+
+// Schutz vor direktem Aufruf: Das Modul darf nur über das Teamchef-Dashboard geladen werden.
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
     exit;
@@ -22,7 +24,7 @@ if (($dashboardPhase ?? '') === 'process') {
         } else {
             $sourceStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter FROM Anmeldung WHERE Radrennen = ? AND Team = ? ORDER BY Startnummer');
             if ($sourceStmt) {
-                mysqli_stmt_bind_param($sourceStmt, 'is', $quelle, $teamRaw);
+                mysqli_stmt_bind_param($sourceStmt, 'is', $quelle, $team);
                 mysqli_stmt_execute($sourceStmt);
                 mysqli_stmt_bind_result($sourceStmt, $mitarbeiterId);
 
@@ -40,7 +42,7 @@ if (($dashboardPhase ?? '') === 'process') {
                     $uebersprungen = 0;
 
                     foreach ($fahrerIds as $fahrerId) {
-                        if (fahrerAnmelden($connection, $ziel, $teamRaw, $fahrerId)) {
+                        if (fahrerAnmelden($connection, $ziel, $team, $fahrerId)) {
                             $kopiert++;
                         } else {
                             $uebersprungen++;
@@ -69,7 +71,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 
     $kopierenZielRennen = array();
-    $zielRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum, `Renn_ID');
+    $zielRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum, `Renn_ID`');
     if ($zielRennenResult) {
         while ($row = mysqli_fetch_assoc($zielRennenResult)) {
             $kopierenZielRennen[] = $row;
@@ -81,7 +83,7 @@ if (($dashboardPhase ?? '') === 'render') {
 ?>
 <hr>
 <h3 id="kopieren">Anmeldungen kopieren</h3>
-<form method="post" action="teamchef_dashboard.php?bereich=kopieren#kopieren">
+<form method="post" action="teamchef_dashboard.php#kopieren">
     <input type="hidden" name="bereich" value="kopieren">
     <input type="hidden" name="task_action" value="kopieren_speichern">
 
