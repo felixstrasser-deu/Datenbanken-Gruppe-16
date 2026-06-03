@@ -60,4 +60,4 @@ if (($indexPhase ?? '') === 'render') {
 
     <button type="submit">Registrieren</button>
 </form>
-<?php } ?>
+<?php }

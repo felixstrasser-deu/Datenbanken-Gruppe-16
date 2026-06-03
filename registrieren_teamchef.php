@@ -62,4 +62,4 @@ $felder = array(
 
     <button type="submit">Registrieren</button>
 </form>
-<?php } ?>
+<?php }

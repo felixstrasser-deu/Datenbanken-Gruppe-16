@@ -77,5 +77,3 @@ if (($indexPhase ?? '') === 'render') {
 </form>
 <?php
 }
-
-?>
