@@ -10,8 +10,9 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
     exit;
 }
 
-// In der process-Phase werden benötigte Daten geladen und Formularaktionen verarbeitet.if (($dashboardPhase ?? '') === 'process') {
-    $ergebnisRennen = post_value('ergebnis_rennen') !== '' ? post_value('ergebnis_rennen') : get_value('ergebnis_rennen');
+// In der process-Phase werden benötigte Daten geladen und Formularaktionen verarbeitet.
+if ($dashboardPhase === 'process') {
+    $ergebnisRennen = post_value('ergebnis_rennen') ?: get_value('ergebnis_rennen');
 
     // Übermittelte Renn-ID und tabellarische Eingaben aus dem POST-Formular auslesen, wenn Speicherformular abgesendet wird.
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && post_value('aktion') === 'ergebnisse_speichern') {
@@ -25,13 +26,17 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
             $fehler = 'Bitte ein gültiges Rennen auswählen.';
         }
 
-        // Jede Tabellenzeile muss eine positive Platzierung und eine positive Fahrtzeit enthalten.
+        // Jede Tabellenzeile muss eine positive Platzierung und eine Fahrtzeit im Format HH:MM:SS enthalten.
         if ($fehler === '') {
             foreach ($startnummern as $i => $startnummer) {
                 $platzierung = filter_var($platzierungen[$i] ?? '', FILTER_VALIDATE_INT);
-                $fahrtzeit = filter_var($fahrtzeiten[$i] ?? '', FILTER_VALIDATE_INT);
+                $fahrtzeit = trim((string) ($fahrtzeiten[$i] ?? ''));
+                $fahrtzeitTeile = explode(':', $fahrtzeit);
+                $fahrtzeitGueltig = preg_match('/^\d{1,3}:[0-5]\d:[0-5]\d$/', $fahrtzeit) === 1
+                    && (int) $fahrtzeitTeile[0] <= 24
+                    && $fahrtzeit !== '00:00:00';
 
-                if ($platzierung === false || $fahrtzeit === false || $platzierung <= 0 || $fahrtzeit <= 0) {
+                if ($platzierung === false || $platzierung <= 0 || !$fahrtzeitGueltig) {
                     $fehler = 'Bitte für jeden Fahrer Platzierung und Fahrtzeit gültig eintragen.';
                     break;
                 }
@@ -47,18 +52,16 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
             foreach ($startnummern as $i => $startnummerRaw) {
                 $startnummer = filter_var($startnummerRaw, FILTER_VALIDATE_INT);
                 $platzierung = filter_var($platzierungen[$i], FILTER_VALIDATE_INT);
-                $fahrtzeit = filter_var($fahrtzeiten[$i], FILTER_VALIDATE_INT);
+                $fahrtzeit = trim((string) $fahrtzeiten[$i]);
 
-                $sql = 'UPDATE Anmeldung
-                        INNER JOIN Radrennen ON Anmeldung.Radrennen = Radrennen.`Renn_ID`
+                $sql = 'UPDATE Anmeldung, Radrennen
                         SET Anmeldung.Platzierung = ?, Anmeldung.Fahrtzeit = ?
-                        WHERE Anmeldung.Radrennen = ?
+                        WHERE Anmeldung.Radrennen = Radrennen.`Renn_ID`
+                        AND Anmeldung.Radrennen = ?
                         AND Anmeldung.Startnummer = ?
                         AND Radrennen.VName = ?
                         AND Anmeldung.Platzierung = 0
-                
-                
-                // Ergebnis nur für das gewählte Rennen, die Startnummer und den aktuellen Veranstalter speichern.        AND Anmeldung.Fahrtzeit = 0';
+                        AND Anmeldung.Fahrtzeit = \'00:00:00\'';
                 $stmt = mysqli_prepare($connection, $sql);
 
                 if (!$stmt) {
@@ -67,7 +70,7 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
                 }
 
                 // Nach dem Update muss genau ein Datensatz betroffen sein, sonst gilt die Speicherung als fehlgeschlagen.
-                mysqli_stmt_bind_param($stmt, 'iiiis', $platzierung, $fahrtzeit, $rennenId, $startnummer, $nameRaw);
+                mysqli_stmt_bind_param($stmt, 'isiis', $platzierung, $fahrtzeit, $rennenId, $startnummer, $nameRaw);
                 $ok = mysqli_stmt_execute($stmt) && mysqli_stmt_affected_rows($stmt) === 1;
                 mysqli_stmt_close($stmt);
 
@@ -110,11 +113,11 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
             $connection,
             'SELECT Anmeldung.Startnummer, Anmeldung.Platzierung, Anmeldung.Fahrtzeit,
                     Fahrer.Mitarbeiter_ID, Fahrer.Name, Fahrer.Team
-             FROM Anmeldung
-             INNER JOIN Fahrer ON Anmeldung.Team = Fahrer.Team
-                AND Anmeldung.Mitarbeiter = Fahrer.Mitarbeiter_ID
-             INNER JOIN Radrennen ON Anmeldung.Radrennen = Radrennen.`Renn_ID`
-             WHERE Anmeldung.Radrennen = ?
+             FROM Anmeldung, Fahrer, Radrennen
+             WHERE Anmeldung.Team = Fahrer.Team
+             AND Anmeldung.Mitarbeiter = Fahrer.Mitarbeiter_ID
+             AND Anmeldung.Radrennen = Radrennen.`Renn_ID`
+             AND Anmeldung.Radrennen = ?
              AND Radrennen.VName = ?
              ORDER BY Anmeldung.Startnummer'
         );
@@ -141,7 +144,7 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
 }
 
 // In der render-Phase wird das Formular zur Ergebniserfassung angezeigt.
-if (($dashboardPhase ?? '') === 'render') {
+if ($dashboardPhase === 'render') {
 ?>
 <hr>
 <h3 id="ergebnisse">Ergebnisse erfassen</h3>
@@ -192,14 +195,16 @@ if (($dashboardPhase ?? '') === 'render') {
                     <tr>
                         <td>
                             <?php echo e($row['Startnummer']); ?>
-                            <input type="hidden" name="startnummer[]" value="<?php echo e($row['Startnummer']); ?>">
                         </td>
                         <td><?php echo e($row['Mitarbeiter_ID'] . ' - ' . $row['Name']); ?></td>
                         <td><?php echo e($row['Team']); ?></td>
 
-                        <?php if ((int) $row['Platzierung'] === 0 && (int) $row['Fahrtzeit'] === 0) { ?>
-                            <td><input type="number" name="platzierung[]" min="1" required></td>
-                            <td><input type="number" name="fahrtzeit[]" min="1" required></td>
+                        <?php if ((int) $row['Platzierung'] === 0 && (string) $row['Fahrtzeit'] === '00:00:00') { ?>
+                            <td>
+                                <input type="hidden" name="startnummer[]" value="<?php echo e($row['Startnummer']); ?>">
+                                <input type="number" name="platzierung[]" min="1" required>
+                            </td>
+                            <td><input type="text" name="fahrtzeit[]" pattern="\d{1,3}:[0-5]\d:[0-5]\d" placeholder="01:23:45" required></td>
                         <?php } else { ?>
                             <td><?php echo e($row['Platzierung']); ?></td>
                             <td><?php echo e($row['Fahrtzeit']); ?></td>

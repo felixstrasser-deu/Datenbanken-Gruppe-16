@@ -74,10 +74,10 @@ class TrainingStats
 
         // SQL-Abfrage mit allen gesetzten Filtern erstellen.
         $sql = 'SELECT Training.Datum, Training.Kilometer
-                FROM Training
-                INNER JOIN Fahrer ON Training.Team = Fahrer.Team
-                    AND Training.Mitarbeiter = Fahrer.Mitarbeiter_ID
-                WHERE ' . implode(' AND ', $bedingungen) . '
+                FROM Training, Fahrer
+                WHERE Training.Team = Fahrer.Team
+                AND Training.Mitarbeiter = Fahrer.Mitarbeiter_ID
+                AND ' . implode(' AND ', $bedingungen) . '
                 ORDER BY Training.Datum';
 
         $stmt = mysqli_prepare($connection, $sql);

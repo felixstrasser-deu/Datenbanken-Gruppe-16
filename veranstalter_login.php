@@ -29,23 +29,14 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
             $found = mysqli_stmt_fetch($stmt);
             mysqli_stmt_close($stmt);
 
-            $passwortKorrekt = $found && (password_verify($kennwort, $dbKennwort) || hash_equals($dbKennwort, $kennwort));
+            $passwortKorrekt = $found && password_verify($kennwort, $dbKennwort);
 
             if (!$passwortKorrekt) {
                 $veranstalterLoginFehler = 'Login fehlgeschlagen.';
             } else {
+                session_regenerate_id(true);
                 $_SESSION['rolle'] = 'veranstalter';
                 $_SESSION['name'] = $dbName;
-
-                if (!password_verify($kennwort, $dbKennwort)) {
-                    $hash = password_hash($kennwort, PASSWORD_DEFAULT);
-                    $update = mysqli_prepare($connection, 'UPDATE Rennveranstalter SET Kennwort = ? WHERE Name = ?');
-                    if ($update) {
-                        mysqli_stmt_bind_param($update, 'ss', $hash, $dbName);
-                        mysqli_stmt_execute($update);
-                        mysqli_stmt_close($update);
-                    }
-                }
 
                 header('Location: veranstalter_dashboard.php');
                 exit;

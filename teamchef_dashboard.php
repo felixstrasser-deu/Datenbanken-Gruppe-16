@@ -9,7 +9,6 @@ require 'functions.php';
 require_once 'TrainingStats.php';
 
 require_role('teamchef');
-mysqli_set_charset($connection, 'utf8mb4');
 
 $teamRaw = (string) ($_SESSION['team'] ?? '');
 $team = $teamRaw;

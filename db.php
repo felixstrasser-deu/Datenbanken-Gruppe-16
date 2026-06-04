@@ -1,18 +1,12 @@
 <?php
 /*
- * Autor: Magdalena Hamm
+ * Autor: Felix Straßer
  */
 $host = "localhost";
 $user = "gruppe16";
 $password = "Bq+7wpK9;J$?";
 $db = "gruppe16";
 
-$connection = mysqli_connect($host, $user, $password);
-if (!$connection) {
-    die("Verbindung fehlgeschlagen: " . mysqli_connect_error());
-}
-
-if (!mysqli_select_db($connection, $db)) {
-    die("Datenbank konnte nicht ausgewählt werden: " . mysqli_error($connection));
-}
+$connection = mysqli_connect($host, $user, $password, $db);
+mysqli_set_charset($connection, 'utf8mb4');
 ?>

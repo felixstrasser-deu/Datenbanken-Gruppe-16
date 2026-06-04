@@ -8,7 +8,6 @@ require 'db.php';
 require 'functions.php';
 
 require_role('veranstalter');
-mysqli_set_charset($connection, 'utf8mb4');
 
 $nameRaw = (string) ($_SESSION['name'] ?? '');
 $meldung = '';

@@ -7,8 +7,6 @@ session_start();
 require 'db.php';
 require 'functions.php';
 
-mysqli_set_charset($connection, 'utf8mb4');
-
 if (isset($_SESSION['rolle'])) {
     if ($_SESSION['rolle'] === 'teamchef') {
         header('Location: teamchef_dashboard.php');

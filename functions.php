@@ -3,25 +3,25 @@
  * Gemeinsame Hilfsfunktionen für Authentifizierung, Ausgabe und Datenbankzugriffe.
  */
 
-/*Magdalena Hamm*/
+/*Johnny Germar*/
 function e($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-/*Magdalena Hamm*/
+/*Johnny Germar*/
 function post_value($key)
 {
     return trim((string) ($_POST[$key] ?? ''));
 }
 
-/*Magdalena Hamm*/
+/*Johnny Germar*/
 function get_value($key)
 {
     return trim((string) ($_GET[$key] ?? ''));
 }
 
-/*Magdalena Hamm*/
+/*Johnny Germar*/
 function require_role($role)
 {
     if (!isset($_SESSION['rolle']) || $_SESSION['rolle'] !== $role) {
@@ -171,7 +171,7 @@ function zukuenftigeRennen($connection, $rennenId)
 function fahrerAnmelden($connection, $rennenId, $team, $mitarbeiterId)
 {
     $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, `PraemieTeam`, `PraemieVeranstalter`, `Radrennen`, `Team`, `Mitarbeiter`)
-            VALUES (0, 0, 0, 0, 0, ?, ?, ?)';
+            VALUES (0, 0, \'00:00:00\', 0, 0, ?, ?, ?)';
     $stmt = mysqli_prepare($connection, $sql);
     if (!$stmt) {
         return false;

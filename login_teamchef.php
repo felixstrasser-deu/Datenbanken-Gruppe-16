@@ -29,24 +29,15 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
             $found = mysqli_stmt_fetch($stmt);
             mysqli_stmt_close($stmt);
 
-            $passwortKorrekt = $found && (password_verify($kennwort, $dbKennwort) || hash_equals($dbKennwort, $kennwort));
+            $passwortKorrekt = $found && password_verify($kennwort, $dbKennwort);
 
             if (!$passwortKorrekt) {
                 $teamchefLoginFehler = 'Login fehlgeschlagen.';
             } else {
+                session_regenerate_id(true);
                 $_SESSION['rolle'] = 'teamchef';
                 $_SESSION['loginname'] = $dbLoginname;
                 $_SESSION['team'] = $dbTeam;
-
-                if (!password_verify($kennwort, $dbKennwort)) {
-                    $hash = password_hash($kennwort, PASSWORD_DEFAULT);
-                    $update = mysqli_prepare($connection, 'UPDATE Teamchef SET Kennwort = ? WHERE Loginname = ?');
-                    if ($update) {
-                        mysqli_stmt_bind_param($update, 'ss', $hash, $dbLoginname);
-                        mysqli_stmt_execute($update);
-                        mysqli_stmt_close($update);
-                    }
-                }
 
                 header('Location: teamchef_dashboard.php');
                 exit;

@@ -1,0 +1,853 @@
+================================================================================
+ERKLÄRUNG DER DATEI: ergebnisse.php
+Eine Anfänger-freundliche Erklärung jeden Code-Elements
+================================================================================
+
+==== ZEILE 1-5: DATEI-HEADER ====
+<?php
+/*
+ * Autor: Magdalena Hamm
+ * Include-Modul für Ergebniserfassung.
+ */
+
+ERKLÄRUNG:
+- "<?php" = Das ist der Start-Tag. Es zeigt dem Computer: "Jetzt kommt PHP-Code"
+- "/*" und "*/" = Das sind Kommentar-Klammern. Alles dazwischen ist nur für Menschen lesbar, 
+  der Computer ignoriert es
+- "Autor: Magdalena Hamm" = Das ist ein Kommentar, der sagt, wer die Datei geschrieben hat
+- "Include-Modul für Ergebniserfassung." = Kommentar, der erklärt, was die Datei macht:
+  Sie erfasst die Ergebnisse von Radrennen
+
+ZUSAMMENGEFASST: Die Datei ist dafür da, um Renn-Ergebnisse (Platzierung, Fahrtzeiten) 
+in die Datenbank einzutragen.
+
+
+==== ZEILE 8-10: SICHERHEITS-SCHUTZ ====
+if (!defined('VERANSTALTER_DASHBOARD')) {
+    header('Location: veranstalter_dashboard.php');
+    exit;
+}
+
+ERKLÄRUNG EINFACH:
+- "if" = "Wenn" - der Computer prüft eine Bedingung
+- "defined('VERANSTALTER_DASHBOARD')" = Hat jemand die Konstante "VERANSTALTER_DASHBOARD" 
+  definiert (erstellt)?
+- "!" = "nicht" - das ! kehrt die Bedeutung um. Also: "Wenn NICHT definiert"
+- "!defined(...)" = "Wenn die Konstante NICHT definiert wurde"
+
+WIRKUNG:
+- Diese Datei soll nur vom Veranstalter-Dashboard aufgerufen werden
+- Wenn jemand direkt die URL "ergebnisse.php" eingibt, wird er NICHT hier zugelassen
+- Stattdessen leitet der Computer ihn zu "veranstalter_dashboard.php" weiter
+- "header('Location: ...')" = Das ist wie ein "Umleitung schild" im Browser
+- "exit;" = Das bedeutet: Stopp! Führe keinen Code mehr aus, der danach kommt
+
+SICHERHEIT: Das schützt die Datei vor Missbrauch - nur Veranstalter dürfen hierher
+
+
+==== ZEILE 14-15: ERSTE VERARBEITUNG ====
+if (($dashboardPhase ?? '') === 'process') {
+    $ergebnisRennen = post_value('ergebnis_rennen') !== '' ? post_value('ergebnis_rennen') : get_value('ergebnis_rennen');
+
+ERKLÄRUNG:
+- "if" = "Wenn"
+- "($dashboardPhase ?? '')" = Prüfe die Variable $dashboardPhase. Das ?? bedeutet:
+  "Falls sie nicht existiert, verwende stattdessen einen leeren Text ''"
+- "=== 'process'" = "ist genau gleich dem Text 'process'"
+
+ZUSAMMENHANG:
+- Diese Zeile prüft: "Sind wir gerade in der Verarbeitungs-Phase?"
+- Wenn ja, werden die folgenden Daten geladen und Formularaktionen verarbeitet
+
+Variable $ergebnisRennen:
+- Das ist ein Behälter (Variable), der speichert, welches Rennen der Benutzer ausgewählt hat
+- "post_value('ergebnis_rennen')" = Holt die Rennen-ID aus dem Formular, wenn der Benutzer 
+  das Formular abgesendet hat (POST-Methode)
+- "get_value('ergebnis_rennen')" = Falls kein POST-Wert da ist, holt die ID aus der URL-Leiste 
+  (GET-Methode)
+- "!== ''" = "ist nicht leer"
+- Das Fragezeichen "?" ist wie "wenn...dann" in Mathe: "Wenn nicht leer, dann POST-Wert, 
+  sonst GET-Wert"
+
+
+==== ZEILE 17-18: FORMULAR WURDE ABGESENDET ====
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && post_value('aktion') === 'ergebnisse_speichern') {
+
+ERKLÄRUNG:
+- "$_SERVER['REQUEST_METHOD']" = Das ist ein großer Behälter mit Server-Infos. 
+  Die Frage ist: Mit welcher Methode kam der Benutzer hierher?
+- "=== 'POST'" = "Wurde das Formular mit POST-Methode abgesendet?" 
+  POST = Der Benutzer hat einen Button geklickt und Daten gesendet
+- "&&" = "und" - BEIDE Bedingungen müssen wahr sein
+- "post_value('aktion') === 'ergebnisse_speichern'" = "Wurde auch 'ergebnisse_speichern' als 
+  Aktion übermittelt?"
+
+ZUSAMMENFASSUNG: Der Benutzer hat das Formular zum Speichern der Ergebnisse abgesendet
+
+
+==== ZEILE 19-22: DATEN AUSLESEN ====
+$rennenId = filter_var($ergebnisRennen, FILTER_VALIDATE_INT);
+$startnummern = $_POST['startnummer'] ?? array();
+$platzierungen = $_POST['platzierung'] ?? array();
+$fahrtzeiten = $_POST['fahrtzeit'] ?? array();
+
+ERKLÄRUNG:
+- "$rennenId" = Variable, die die Renn-ID speichert
+- "filter_var(..., FILTER_VALIDATE_INT)" = Das ist wie eine Kontrolle: "Ist das wirklich 
+  eine ganze Zahl (Integer)? Wenn nicht, setze es auf false (falsch)"
+- "$_POST['startnummer']" = Holt alle Startnummern aus dem Formular. Mit "[]" bedeutet: 
+  Es können mehrere Werte sein (Array = Liste)
+- "?? array()" = "Falls leer, verwende eine leere Liste statt Fehler"
+
+ZUSAMMENHANG:
+- Der Computer sammelt alle Informationen, die der Benutzer im Formular eingegeben hat
+- $rennenId = Welches Rennen?
+- $startnummern = Welche Fahrer (Startnummern)?
+- $platzierungen = Welche Plätze (1., 2., 3., etc.)?
+- $fahrtzeiten = Wie lange waren die Fahrtzeiten?
+
+
+==== ZEILE 25-27: ERSTE SICHERHEITSPRÜFUNG ====
+if ($rennenId === false || $rennenId <= 0) {
+    $fehler = 'Bitte ein gültiges Rennen auswählen.';
+}
+
+ERKLÄRUNG:
+- "===" = "ist genau gleich"
+- "|| " = "oder" (wenn eine von zwei Bedingungen wahr ist, ist das ganze wahr)
+- "$rennenId === false" = "Ist die Renn-ID ungültig (false)?"
+- "$rennenId <= 0" = "Ist die Renn-ID kleiner oder gleich 0? (negative oder null Zahlen sind ungültig)"
+
+FUNKTION:
+- Der Computer prüft: "Hat der Benutzer eine gültige Renn-ID eingegeben?"
+- Wenn nicht, wird eine Fehlermeldung gespeichert in "$fehler"
+- Diese Meldung wird später dem Benutzer angezeigt
+
+
+==== ZEILE 31-45: ÜBERPRÜFUNG ALLER EINGABEN ====
+if ($fehler === '') {
+    foreach ($startnummern as $i => $startnummer) {
+        $platzierung = filter_var($platzierungen[$i] ?? '', FILTER_VALIDATE_INT);
+        $fahrtzeit = trim((string) ($fahrtzeiten[$i] ?? ''));
+        $fahrtzeitTeile = explode(':', $fahrtzeit);
+        $fahrtzeitGueltig = preg_match('/^\d{1,3}:[0-5]\d:[0-5]\d$/', $fahrtzeit) === 1
+            && (int) $fahrtzeitTeile[0] <= 838
+            && $fahrtzeit !== '00:00:00';
+
+        if ($platzierung === false || $platzierung <= 0 || !$fahrtzeitGueltig) {
+            $fehler = 'Bitte für jeden Fahrer Platzierung und Fahrtzeit gültig eintragen.';
+            break;
+        }
+    }
+}
+
+ERKLÄRUNG:
+- "if ($fehler === '')" = "Wenn es noch keinen Fehler gibt, dann prüfe weiter"
+- "foreach ($startnummern as $i => $startnummer)" = "Für jeden Fahrer in der Liste..."
+  - $i = die Position in der Liste (0, 1, 2, ...)
+  - $startnummer = die Startnummer des Fahrers
+- "$platzierung = filter_var(...)" = Holt die Platzierung und prüft, ob es eine ganze Zahl ist
+- "$fahrtzeit = trim(...)" = Holt die Fahrtzeit und entfernt Leerzeichen 
+  (trim = trimmen = Ränder abschneiden)
+- "(string)(...)" = Wandle es in einen Text um
+- "$fahrtzeitTeile = explode(':', $fahrtzeit)" = Teile die Fahrtzeit in Teile auf
+  Beispiel: "01:23:45" wird zu ["01", "23", "45"]
+  Das ":" ist das Trennzeichen
+- "preg_match(...)" = Das ist ein Muster-Vergleich. Es prüft die Fahrtzeit auf das Muster
+  "/^\d{1,3}:[0-5]\d:[0-5]\d$/" 
+  Was bedeutet das?
+  - ^ = Anfang des Textes
+  - \d{1,3} = Eine bis drei Ziffern (für Stunden)
+  - : = Ein Doppelpunkt
+  - [0-5]\d = Zwei Ziffern, wobei die erste 0-5 ist (für Minuten 00-59)
+  - : = Ein Doppelpunkt
+  - [0-5]\d = Zwei Ziffern, wobei die erste 0-5 ist (für Sekunden 00-59)
+  - $ = Ende des Textes
+  Zusammengefasst: Prüft, ob die Fahrtzeit im Format HH:MM:SS ist, z.B. "01:23:45"
+- "=== 1" = "Passt es perfekt?"
+- "&& (int) $fahrtzeitTeile[0] <= 838" = "und ist die erste Zahl (Stunden) maximal 838?"
+- "&& $fahrtzeit !== '00:00:00'" = "und ist die Fahrtzeit nicht 00:00:00?" 
+  (Das ist die Standard-Leerzeit, bedeutet "noch nicht erfasst")
+- "$fahrtzeitGueltig" = Eine neue Variable, die speichert: "Ist die Fahrtzeit gültig?"
+- "if ($platzierung === false || ...)" = "Wenn Platzierung ungültig ODER Fahrtzeit ungültig..."
+  - Dann speichere einen Fehler und breche die Schleife ab (break = stopp)
+
+ZWECK: Der Computer prüft ALLE Eingaben des Benutzers, bevor er was speichert
+
+
+==== ZEILE 48-49: TRANSAKTION STARTEN ====
+if ($fehler === '') {
+    mysqli_begin_transaction($connection);
+
+ERKLÄRUNG:
+- "mysqli_begin_transaction($connection)" = Das ist wie ein "Anfangspunkt, von dem ich 
+  zurückgehen kann". Wenn alles gut läuft, wird alles gespeichert. Wenn was schief läuft, 
+  machen wir alles rückgängig.
+- Das ist wichtig: Entweder werden ALLE Daten gespeichert oder KEINE
+
+BILD: Stellen Sie sich vor, Sie verschieben Geld von einer Bank zur anderen:
+- Schritt 1: Transaktion beginnen
+- Schritt 2: Von Konto A abbuchen
+- Schritt 3: Zu Konto B hinzufügen
+Wenn was schiefläuft, fangen wir von vorne an. Wir wollen nicht, dass das Geld verschwindet!
+
+
+==== ZEILE 50-69: DATEN IN DATENBANK SPEICHERN ====
+$ok = true;
+foreach ($startnummern as $i => $startnummerRaw) {
+    $startnummer = filter_var($startnummerRaw, FILTER_VALIDATE_INT);
+    $platzierung = filter_var($platzierungen[$i], FILTER_VALIDATE_INT);
+    $fahrtzeit = trim((string) $fahrtzeiten[$i]);
+
+    $sql = 'UPDATE Anmeldung, Radrennen
+            SET Anmeldung.Platzierung = ?, Anmeldung.Fahrtzeit = ?
+            WHERE Anmeldung.Radrennen = Radrennen.`Renn_ID`
+            AND Anmeldung.Radrennen = ?
+            AND Anmeldung.Startnummer = ?
+            AND Radrennen.VName = ?
+            AND Anmeldung.Platzierung = 0
+            AND Anmeldung.Fahrtzeit = \'00:00:00\'';
+
+ERKLÄRUNG:
+- "$ok = true" = Variable, die sagt: "Bis jetzt läuft alles okay"
+- Für jeden Fahrer:
+  - Prüfe und speichere Startnummer, Platzierung und Fahrtzeit
+  - "$sql = 'UPDATE...'" = Das ist eine SQL-Befehl (Datenbank-Sprache)
+    SQL = Structured Query Language (strukturierte Abfragesprache)
+  
+SQL-BEFEHL ERKLÄRT:
+- "UPDATE Anmeldung, Radrennen" = "Ändere die Tabelle 'Anmeldung' und nutze dabei auch
+  die Tabelle 'Radrennen'"
+- "SET Anmeldung.Platzierung = ?, Anmeldung.Fahrtzeit = ?" = "Setze neue Werte:
+  - Die Platzierung auf den neuen Wert (?)
+  - Die Fahrtzeit auf den neuen Wert (?)"
+  Die ? sind Platzhalter für die echten Werte (Sicherheit!)
+- "WHERE ..." = "Aber nur ändern bei diesen Bedingungen:"
+  - "Anmeldung.Radrennen = Radrennen.`Renn_ID`" = Die Renn-IDs stimmen in beiden Tabellen überein
+  - "Anmeldung.Radrennen = ?" = Die Renn-ID passt
+  - "Anmeldung.Startnummer = ?" = Die Startnummer passt
+  - "Radrennen.VName = ?" = Der Veranstalter passt (Sicherheit!)
+  - "Anmeldung.Platzierung = 0" = Die Platzierung ist noch 0 (noch nicht erfasst)
+  - "Anmeldung.Fahrtzeit = '00:00:00'" = Die Fahrtzeit ist noch 00:00:00 (noch nicht erfasst)
+
+SICHERHEIT: Diese Bedingungen stellen sicher:
+- Nur noch nicht erfasste Ergebnisse werden geändert (kein Überschreiben von existierenden)
+- Nur der richtige Veranstalter kann seine eigenen Rennen ändern
+- Nur der richtige Fahrer wird geändert
+
+
+==== ZEILE 71-77: SQL-BEFEHL VORBEREITEN ====
+$stmt = mysqli_prepare($connection, $sql);
+
+if (!$stmt) {
+    $ok = false;
+    break;
+}
+
+ERKLÄRUNG:
+- "$stmt = mysqli_prepare($connection, $sql)" = "Bereite den SQL-Befehl vor"
+  - mysqli = PHP-Bibliothek für MySQL-Datenbank
+  - prepare = vorbereiten
+  - $connection = Die Verbindung zur Datenbank
+  - $sql = Der SQL-Befehl von oben
+  Das ist wie: "Datenbank, mach dich bereit, diesen Befehl zu verstehen"
+
+- "if (!$stmt)" = "Wenn die Vorbereitung schief läuft..."
+  - "!" = nicht
+  - $ok = false = "Setz den Status auf 'nicht okay'"
+  - break = "Stoppe diese Schleife"
+
+GRUND: Wenn der Computer den Befehl nicht vorbereiten kann, ist was falsch. 
+Dann stoppen wir besser, bevor mehr Fehler entstehen.
+
+
+==== ZEILE 79-82: WERTE EINSETZEN UND AUSFÜHREN ====
+mysqli_stmt_bind_param($stmt, 'isiis', $platzierung, $fahrtzeit, $rennenId, $startnummer, $nameRaw);
+$ok = mysqli_stmt_execute($stmt) && mysqli_stmt_affected_rows($stmt) === 1;
+mysqli_stmt_close($stmt);
+
+if (!$ok) {
+    break;
+}
+
+ERKLÄRUNG:
+- "mysqli_stmt_bind_param(...)" = "Setze die Platzhalter ? in den SQL-Befehl ein"
+  - 'isiis' = Das sind die Typen der Werte:
+    - i = integer (ganze Zahl) für Platzierung
+    - s = string (Text) für Fahrtzeit
+    - i = integer für Renn-ID
+    - i = integer für Startnummer
+    - s = string für Veranstalter-Name
+  - $platzierung, $fahrtzeit, $rennenId, $startnummer, $nameRaw = Die echten Werte
+  
+Das ist wie: "Der erste ? ist Platzierung (Zahl), der zweite ? ist Fahrtzeit (Text)", etc.
+Das macht den Befehl sicher vor Hacker-Angriffen (SQL-Injection)!
+
+- "mysqli_stmt_execute($stmt)" = "Führe den vorbereiteten Befehl jetzt aus"
+  Das speichert die Daten in der Datenbank!
+  
+- "mysqli_stmt_affected_rows($stmt) === 1" = "Wurden genau 1 Datensätze geändert?"
+  Das prüft: Hat der Befehl gemacht, was wir wollten?
+  
+- "&&" = und BEIDE müssen wahr sein:
+  - Der Befehl wurde erfolgreich ausgeführt UND
+  - Genau 1 Zeile wurde geändert
+
+- "$ok = ... && ..." = Speichere das Ergebnis: "Lief alles glatt?"
+
+- "mysqli_stmt_close($stmt)" = "Schließe den vorbereiteten Befehl"
+  Das spart Speicher
+
+- "if (!$ok) { break; }" = "Falls was schief lief, stoppe diese Schleife"
+
+ZUSAMMENHANG: Der Computer speichert EINEN Fahrer. 
+Diese Schleife verarbeitet nacheinander alle Fahrer.
+
+
+==== ZEILE 87-95: TRANSAKTION ABSCHLIESSEN ====
+if ($ok) {
+    mysqli_commit($connection);
+    $meldung = 'Ergebnisse wurden gespeichert.';
+} else {
+    mysqli_rollback($connection);
+    $fehler = 'Ergebnisse konnten nicht gespeichert werden oder wurden bereits erfasst.';
+}
+
+ERKLÄRUNG:
+- "if ($ok)" = "Wenn alles okay lief..."
+- "mysqli_commit($connection)" = "Speichere ALLE Änderungen dauerhaft in der Datenbank"
+  commit = zu verpflichten = "Okay, speicher das jetzt!"
+- "$meldung = '...'" = Speichere eine Erfolgs-Meldung, um sie später anzuzeigen
+
+- "else" = "Falls NOT okay lief..."
+- "mysqli_rollback($connection)" = "Mach ALLES rückgängig, als hätte der Computer nichts gemacht"
+  rollback = zurückrollen = "Nein, vergiss das!"
+- "$fehler = '...'" = Speichere eine Fehler-Meldung
+
+METAPHER: Das ist wie die Undo-Funktion im Word-Programm:
+- Wenn alles gut lief: Speichern
+- Wenn was schiefging: Alles rückgängig machen, so dass die Datenbank wieder im alten Zustand ist
+
+
+==== ZEILE 98-108: RENNEN-LISTE LADEN ====
+$veranstalterRennen = array();
+$rennenListeStmt = mysqli_prepare($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE VName = ? ORDER BY Datum DESC, `Renn_ID` DESC');
+if ($rennenListeStmt) {
+    mysqli_stmt_bind_param($rennenListeStmt, 's', $nameRaw);
+    mysqli_stmt_execute($rennenListeStmt);
+    mysqli_stmt_bind_result($rennenListeStmt, $dbRennenId, $dbDatum, $dbStandort);
+
+    while (mysqli_stmt_fetch($rennenListeStmt)) {
+        $veranstalterRennen[] = array('Renn_ID' => $dbRennenId, 'Datum' => $dbDatum, 'Standort' => $dbStandort);
+    }
+
+    mysqli_stmt_close($rennenListeStmt);
+}
+
+ERKLÄRUNG:
+- "$veranstalterRennen = array()" = Das ist eine leere Liste. Hier werden alle Rennen 
+  des Veranstalters eingefügt.
+  
+SQL-BEFEHL:
+- "SELECT `Renn_ID`, Datum, Standort" = "Holt diese Spalten aus der Datenbank:"
+  - Renn-ID
+  - Datum
+  - Standort
+- "FROM Radrennen" = "aus der Tabelle 'Radrennen'"
+- "WHERE VName = ?" = "Nur Rennen, die dieser Veranstalter organisiert"
+- "ORDER BY Datum DESC, `Renn_ID` DESC" = "Sortiere nach:"
+  - DESC = descending (absteigend) = neueste zuerst
+  - Zuerst nach Datum (neuste Rennen oben)
+  - Dann nach Renn-ID (falls gleicher Tag)
+
+- "mysqli_stmt_bind_param($rennenListeStmt, 's', $nameRaw)" = "Der ? ist ein String und 
+  seine Wert ist $nameRaw (Veranstalter-Name)"
+  
+- "mysqli_stmt_execute($rennenListeStmt)" = "Führe den Befehl aus"
+
+- "mysqli_stmt_bind_result(...)" = "Speichere die Ergebnisse in diese Variablen:"
+  - $dbRennenId = Renn-ID
+  - $dbDatum = Datum
+  - $dbStandort = Standort
+
+- "while (mysqli_stmt_fetch($rennenListeStmt))" = "Für jedes Ergebnis..."
+  fetch = holen/abrufen
+  Das macht eine Schleife für jedes Rennen
+  
+- "$veranstalterRennen[] = array(...)" = "Füge ein neues Element zur Liste hinzu"
+  Die [] bedeutet: "an das Ende der Liste"
+  Das array(...) erstellt einen neuen Behälter mit den Werten:
+  - 'Renn_ID' => $dbRennenId (der Schlüssel 'Renn_ID' hat den Wert $dbRennenId)
+  - 'Datum' => $dbDatum
+  - 'Standort' => $dbStandort
+
+ERGEBNIS: Die Liste $veranstalterRennen enthält jetzt alle Rennen des Veranstalters 
+in dieser Form:
+  [
+    ['Renn_ID' => 1, 'Datum' => '2024-01-15', 'Standort' => 'München'],
+    ['Renn_ID' => 2, 'Datum' => '2024-02-20', 'Standort' => 'Berlin'],
+    ...
+  ]
+
+
+==== ZEILE 111-139: FAHRER FÜR DAS GEWÄHLTE RENNEN LADEN ====
+$ergebnisAnmeldungen = array();
+$rennenNummer = filter_var($ergebnisRennen, FILTER_VALIDATE_INT);
+if ($rennenNummer !== false && $rennenNummer > 0) {
+    $stmt = mysqli_prepare(
+        $connection,
+        'SELECT Anmeldung.Startnummer, Anmeldung.Platzierung, Anmeldung.Fahrtzeit,
+                Fahrer.Mitarbeiter_ID, Fahrer.Name, Fahrer.Team
+         FROM Anmeldung, Fahrer, Radrennen
+         WHERE Anmeldung.Team = Fahrer.Team
+         AND Anmeldung.Mitarbeiter = Fahrer.Mitarbeiter_ID
+         AND Anmeldung.Radrennen = Radrennen.`Renn_ID`
+         AND Anmeldung.Radrennen = ?
+         AND Radrennen.VName = ?
+         ORDER BY Anmeldung.Startnummer'
+    );
+
+ERKLÄRUNG:
+- "$ergebnisAnmeldungen = array()" = Leere Liste für alle Fahrer des Rennens
+- "$rennenNummer = filter_var(...)" = Holt die Renn-ID und prüft, ob es eine gültige 
+  ganze Zahl ist
+- "if ($rennenNummer !== false && $rennenNummer > 0)" = "Wenn die Renn-ID gültig und > 0..."
+
+SQL-BEFEHL ERKLÄRT:
+- "SELECT Anmeldung.Startnummer, ..." = "Hol diese Spalten:"
+  - Startnummer (aus Tabelle Anmeldung)
+  - Platzierung (aus Anmeldung)
+  - Fahrtzeit (aus Anmeldung)
+  - Mitarbeiter-ID (aus Fahrer)
+  - Name (aus Fahrer)
+  - Team (aus Fahrer)
+
+- "FROM Anmeldung, Fahrer, Radrennen" = "Nutze diese drei Tabellen"
+
+- "WHERE Anmeldung.Team = Fahrer.Team AND Anmeldung.Mitarbeiter = Fahrer.Mitarbeiter_ID"
+  Das verbindet Anmeldung mit Fahrer:
+  - Wenn das Team in Anmeldung = Team in Fahrer UND
+  - Mitarbeiter-ID in Anmeldung = Mitarbeiter-ID in Fahrer
+  Dann gehören diese Zeilen zusammen!
+
+- "AND Anmeldung.Radrennen = Radrennen.`Renn_ID`"
+  Das verbindet Anmeldung mit Radrennen:
+  - Wenn Renn-ID in Anmeldung = Renn-ID in Radrennen
+
+- "AND Anmeldung.Radrennen = ? AND Radrennen.VName = ?"
+  Bedingungen:
+  - Das gewählte Rennen (?)
+  - Und der Veranstalter muss der aktuelle sein (VName = ?)
+
+- "ORDER BY Anmeldung.Startnummer" = "Sortiere nach Startnummer (1, 2, 3, ...)"
+
+ZUSAMMENGEFASST: Dieser Befehl holt alle Fahrer, die sich für das gewählte Rennen angemeldet haben,
+zusammen mit ihren Namen, Teams und eventuellen vorhandenen Ergebnissen.
+
+
+==== ZEILE 141-154: DATEN AUS DATENBANK SPEICHERN ====
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, 'is', $rennenNummer, $nameRaw);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_bind_result($stmt, $startnummer, $platzierung, $fahrtzeit, $mitarbeiterId, $fahrerName, $teamName);
+
+        while (mysqli_stmt_fetch($stmt)) {
+            $ergebnisAnmeldungen[] = array(
+                'Startnummer' => $startnummer,
+                'Platzierung' => $platzierung,
+                'Fahrtzeit' => $fahrtzeit,
+                'Mitarbeiter_ID' => $mitarbeiterId,
+                'Name' => $fahrerName,
+                'Team' => $teamName,
+            );
+        }
+
+        mysqli_stmt_close($stmt);
+    }
+}
+
+ERKLÄRUNG:
+- "if ($stmt)" = "Wenn die Vorbereitung erfolgreich war..."
+
+- "mysqli_stmt_bind_param($stmt, 'is', $rennenNummer, $nameRaw)"
+  - 'is' = Zwei Platzhalter: i (integer) und s (string)
+  - Die Werte sind $rennenNummer und $nameRaw
+
+- "mysqli_stmt_execute($stmt)" = "Führe den Befehl aus"
+
+- "mysqli_stmt_bind_result(...)" = "Speichere die Ergebnisse in diese Variablen:
+  - $startnummer
+  - $platzierung
+  - $fahrtzeit
+  - $mitarbeiterId
+  - $fahrerName
+  - $teamName
+
+- "while (mysqli_stmt_fetch($stmt))" = "Für jede Zeile, die der Befehl zurückgibt..."
+  - Mache eine Schleife
+  - fetch = hole die nächste Zeile
+  - Jedes Mal werden die Werte in die Variablen gespeichert
+
+- "$ergebnisAnmeldungen[] = array(...)" = "Füge einen neuen Fahrer zur Liste hinzu"
+  Mit allen seinen Informationen
+
+
+==== ZEILE 161-168: RENDER-PHASE STARTET ====
+if (($dashboardPhase ?? '') === 'render') {
+?>
+<hr>
+<h3 id="ergebnisse">Ergebnisse erfassen</h3>
+
+ERKLÄRUNG:
+- "if (($dashboardPhase ?? '') === 'render')" = "Wenn wir in der Darstellungs-Phase sind..."
+  render = darstellen/anzeigen
+  
+- "?>" = Das bedeutet: "Ende PHP, jetzt kommt HTML!"
+  
+- "<hr>" = HTML-Tag für eine horizontale Linie (Trennlinie)
+
+- "<h3>Ergebnisse erfassen</h3>" = Überschrift der Größe 3
+  - h3 = heading 3
+  - id="ergebnisse" = Eine Kennung, damit man mit #ergebnisse zur Stelle springen kann
+
+ZWECK: Jetzt wird die HTML-Seite aufgebaut, die der Benutzer im Browser sieht.
+
+
+==== ZEILE 170-177: ERSTES FORMULAR (RENNEN-AUSWAHL) ====
+<form method="get" action="veranstalter_dashboard.php#ergebnisse">
+    <input type="hidden" name="bereich" value="ergebnisse">
+    <label for="ergebnis_rennen">Rennen:</label><br>
+    <select name="ergebnis_rennen" id="ergebnis_rennen" required>
+        <option value="">Bitte wählen</option>
+
+ERKLÄRUNG:
+- "<form>" = Der Start eines Formulars (Eingabe-Formular)
+- "method="get"" = Wenn der Benutzer das Formular absendet, werden die Daten in der 
+  URL-Leiste angezeigt (nicht versteckt)
+  Beispiel: veranstalter_dashboard.php?bereich=ergebnisse&ergebnis_rennen=1
+- "action="veranstalter_dashboard.php#ergebnisse"" = Wenn abgesendet, gehe zu dieser Seite
+  #ergebnisse = und springe zur Stelle id="ergebnisse"
+
+- "<input type="hidden"...>" = Ein unsichtbares Eingabefeld
+  - name="bereich" value="ergebnisse"
+  - Das wird mitgesendet, aber der Benutzer sieht es nicht
+  - Das sagt dem Dashboard: "Ich bin der Ergebnisse-Bereich"
+
+- "<label for="ergebnis_rennen">Rennen:</label>" = Ein Text-Label
+  - for="ergebnis_rennen" = Das bezieht sich auf das Element mit id="ergebnis_rennen"
+  - Wenn man drauf klickt, fokussiert man das Select-Feld
+  
+- "<br>" = Zeilenumbruch (neue Zeile)
+
+- "<select name="ergebnis_rennen" id="ergebnis_rennen" required>" = Ein Dropdown-Menü
+  - name="ergebnis_rennen" = Der Name der Eingabe (wird mitgesendet)
+  - required = Pflichtfeld (muss was ausgewählt sein)
+
+- "<option value="">Bitte wählen</option>" = Die erste Option (vor Auswahl)
+  - value="" = leerer Wert
+  - Der Text "Bitte wählen" wird angezeigt
+
+
+==== ZEILE 179-185: RENNEN-OPTIONEN AUSGEBEN ====
+        <?php foreach ($veranstalterRennen as $rennenEintrag) { ?>
+            <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>" <?php if ((string) $ergebnisRennen === (string) $rennenEintrag['Renn_ID']) echo 'selected'; ?>>
+                <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
+            </option>
+        <?php } ?>
+
+ERKLÄRUNG:
+- "<?php ... ?>" = Wechsel zurück zu PHP-Code
+- "foreach ($veranstalterRennen as $rennenEintrag)" = "Für jeden Rennen-Eintrag in der Liste..."
+  - $rennenEintrag = der aktuelle Rennen-Eintrag
+
+- "<?php echo e(...); ?>" = Gib den Text aus
+  - echo = ausgeben/drucken
+  - e(...) = Das ist eine Hilfsfunktion (wahrscheinlich für Sicherheit, z.B. HTML-Tags escapen)
+
+- "$rennenEintrag['Renn_ID']" = Hol die Renn-ID aus diesem Eintrag
+  ['Renn_ID'] = der Schlüssel, um auf den Wert zuzugreifen
+
+- "value="<?php echo e($rennenEintrag['Renn_ID']); ?>"" = Der Wert dieser Option ist die Renn-ID
+  Wenn der Benutzer diese Option wählt, wird diese ID abgesendet
+
+- "if ((string) $ergebnisRennen === (string) $rennenEintrag['Renn_ID'])" = 
+  "Wenn die aktuelle Auswahl dieses Rennen ist..."
+  - (string) = wandle zu Text um (für sicheren Vergleich)
+  - === = exakter Vergleich
+  
+- "echo 'selected'" = "Dann gib 'selected' aus"
+  Das sorgt dafür, dass diese Option hervorgehoben ist (bereits ausgewählt)
+
+- "$rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']"
+  - "." = Verkettung (kombiniere Texte)
+  - Das ergibt z.B.: "1 - 2024-01-15 - München"
+
+- "<?php } ?>" = Ende der foreach-Schleife
+
+ERGEBNIS: Für jedes Rennen wird eine Option im Dropdown-Menü erstellt
+Beispiel:
+  <option value="1">1 - 2024-01-15 - München</option>
+  <option value="2" selected>2 - 2024-02-20 - Berlin</option>
+
+
+==== ZEILE 187-191: ABSENDE-BUTTON UND FORMULAR-ENDE ====
+    <br><br>
+
+    <button type="submit">Anzeigen</button>
+</form>
+
+ERKLÄRUNG:
+- "<br><br>" = Zwei Zeilenumbrüche (etwas Abstand)
+
+- "<button type="submit">Anzeigen</button>" = Ein Button
+  - type="submit" = Wenn man drauf klickt, wird das Formular abgesendet
+  - Der Text "Anzeigen" wird angezeigt
+
+- "</form>" = Ende des Formulars
+
+FUNKTION: Wenn der Benutzer ein Rennen wählt und auf "Anzeigen" klickt:
+- Das Formular wird mit GET-Methode abgesendet
+- Die URL wird zu: veranstalter_dashboard.php?bereich=ergebnisse&ergebnis_rennen=1
+- Der Code von oben wird wieder ausgeführt und zeigt die Fahrer dieses Rennens
+
+
+==== ZEILE 193-195: PRÜFUNG - RENNEN AUSGEWÄHLT? ====
+<!-- Wenn für das gewählte Rennen keine Fahrer angemeldet sind, wird eine Hinweismeldung angezeigt. -->
+<?php if ($ergebnisRennen !== '') { ?>
+    <?php if (count($ergebnisAnmeldungen) === 0) { ?>
+
+ERKLÄRUNG:
+- "<!-- ... -->" = HTML-Kommentar (für Menschen lesbar, Computer ignoriert)
+
+- "<?php if ($ergebnisRennen !== '') { ?>" = "Wenn das Benutzer ein Rennen ausgewählt hat
+  (nicht leer)..."
+  !== = "nicht gleich"
+
+- "<?php if (count($ergebnisAnmeldungen) === 0) { ?>" = "Wenn es 0 Anmeldungen gibt..."
+  count(...) = zähle die Elemente in einer Liste
+  === 0 = "ist genau 0?"
+
+
+==== ZEILE 196: KEINE ANMELDUNGEN ====
+        <p>Keine Anmeldungen für dieses Rennen gefunden.</p>
+
+ERKLÄRUNG:
+- "<p>" = Absatz (paragraph)
+- Diese Meldung wird angezeigt, wenn die Rendnen-Fahrer-Liste leer ist
+
+
+==== ZEILE 198-202: ZWEITES FORMULAR (ERGEBNISSE-EINGABE) ====
+    <?php } else { ?>
+        <form method="post" action="veranstalter_dashboard.php?bereich=ergebnisse#ergebnisse">
+            <input type="hidden" name="bereich" value="ergebnisse">
+            <input type="hidden" name="aktion" value="ergebnisse_speichern">
+            <input type="hidden" name="ergebnis_rennen" value="<?php echo e($ergebnisRennen); ?>">
+
+ERKLÄRUNG:
+- "<?php } else { ?>" = "Falls es NICHT 0 Anmeldungen gibt (also es gibt Fahrer)..."
+
+- "<form method="post"...>" = Ein neues Formular
+  - method="post" = Die Daten werden versteckt abgesendet (nicht in der URL)
+  
+- Drei verborgene Felder:
+  1. bereich = "ergebnisse" (welcher Bereich)
+  2. aktion = "ergebnisse_speichern" (welche Aktion)
+  3. ergebnis_rennen = die Renn-ID
+
+Diese Felder speichern die Kontext-Informationen, damit der Server weiß, was zu tun ist
+
+
+==== ZEILE 204-214: TABELLEN-KOPF ====
+            <table border="1" cellpadding="5" cellspacing="0">
+                <tr>
+                    <th>Startnummer</th>
+                    <th>Fahrer</th>
+                    <th>Team</th>
+                    <th>Platzierung</th>
+                    <th>Fahrtzeit</th>
+                </tr>
+
+ERKLÄRUNG:
+- "<table>" = Start einer Tabelle
+  - border="1" = Rand um die Tabelle (Breite 1 Pixel)
+  - cellpadding="5" = 5 Pixel Abstand innen in jeder Zelle
+  - cellspacing="0" = 0 Pixel Abstand zwischen Zellen
+
+- "<tr>" = Table Row (Tabellenzeile)
+
+- "<th>" = Table Header (Tabellen-Kopfzeile)
+  Das sind die Spalten-Namen:
+  - Startnummer
+  - Fahrer
+  - Team
+  - Platzierung
+  - Fahrtzeit
+
+
+==== ZEILE 216-233: TABELLEN-ZEILEN FÜR JEDEN FAHRER ====
+                <!-- Noch nicht erfasste Ergebnisse können eingegeben werden; bereits gespeicherte Ergebnisse werden nur angezeigt. -->
+                <?php foreach ($ergebnisAnmeldungen as $row) { ?>
+                    <tr>
+                        <td>
+                            <?php echo e($row['Startnummer']); ?>
+                        </td>
+                        <td><?php echo e($row['Mitarbeiter_ID'] . ' - ' . $row['Name']); ?></td>
+                        <td><?php echo e($row['Team']); ?></td>
+
+ERKLÄRUNG:
+- "<?php foreach ($ergebnisAnmeldungen as $row) { ?>" = "Für jeden Fahrer..."
+  - $row = die aktuelle Fahrer-Reihe (row = Zeile)
+
+- "<tr>" = Tabellen-Zeile für diesen Fahrer
+- "<td>" = Table Data (Datenzelle)
+
+- Die ersten drei Zellen:
+  1. Startnummer: $row['Startnummer']
+  2. Fahrer: $row['Mitarbeiter_ID'] . ' - ' . $row['Name'] (z.B. "12345 - Max Müller")
+  3. Team: $row['Team']
+
+Das wird einfach nur angezeigt (read-only)
+
+
+==== ZEILE 235-244: PLATZIERUNG UND FAHRTZEIT - CONDITIONALE ====
+                        <?php if ((int) $row['Platzierung'] === 0 && (string) $row['Fahrtzeit'] === '00:00:00') { ?>
+                            <td>
+                                <input type="hidden" name="startnummer[]" value="<?php echo e($row['Startnummer']); ?>">
+                                <input type="number" name="platzierung[]" min="1" required>
+                            </td>
+                            <td><input type="text" name="fahrtzeit[]" pattern="\d{1,3}:[0-5]\d:[0-5]\d" placeholder="01:23:45" required></td>
+                        <?php } else { ?>
+                            <td><?php echo e($row['Platzierung']); ?></td>
+                            <td><?php echo e($row['Fahrtzeit']); ?></td>
+                        <?php } ?>
+
+ERKLÄRUNG:
+- "if ((int) $row['Platzierung'] === 0 && (string) $row['Fahrtzeit'] === '00:00:00')"
+  = "Wenn Platzierung 0 UND Fahrtzeit ist noch '00:00:00'..."
+  
+Das bedeutet: "Ist das Ergebnis NOCH NICHT erfasst?"
+
+WENN NOCH NICHT ERFASST:
+- Ein verstecktes Feld speichert die Startnummer: name="startnummer[]"
+  - [] = es kann mehrere geben (für alle Fahrer)
+
+- Ein Zahlfeld für Platzierung:
+  - type="number" = nur Zahlen
+  - name="platzierung[]" = wird als Liste abgesendet
+  - min="1" = mindestens 1
+  - required = Pflichtfeld
+
+- Ein Textfeld für Fahrtzeit:
+  - type="text" = Freitextfeld
+  - name="fahrtzeit[]" = wird als Liste abgesendet
+  - pattern="\d{1,3}:[0-5]\d:[0-5]\d" = Die Fahrtzeit muss dieses Format haben (HH:MM:SS)
+  - placeholder="01:23:45" = Beispiel-Text im Feld
+  - required = Pflichtfeld
+
+WENN BEREITS ERFASST:
+- else = ... sonst
+- Zeige nur die Werte (nicht editierbar):
+  - <td><?php echo e($row['Platzierung']); ?></td>
+  - <td><?php echo e($row['Fahrtzeit']); ?></td>
+
+GRUND: Man soll nicht versehentlich bereits erfasste Ergebnisse ändern!
+
+
+==== ZEILE 246-250: TABELLE BEENDEN, BUTTON ====
+                    </tr>
+                <?php } ?>
+            </table>
+            <br>
+
+            <button type="submit">Ergebnisse speichern</button>
+
+ERKLÄRUNG:
+- "</tr>" = Tabellenzeile beenden
+- "<?php } ?>" = Ende der foreach-Schleife (alle Fahrer verarbeitet)
+- "</table>" = Tabelle beenden
+
+- "<br>" = Zeilenumbruch
+
+- "<button type="submit">Ergebnisse speichern</button>" = Button
+  - Wenn drauf geklickt: Das Formular wird mit POST abgesendet
+  - Die Daten gehen an veranstalter_dashboard.php
+  - Dort werden sie (von Anfang an) verarbeitet und in die Datenbank gespeichert
+
+
+==== ZEILE 251-254: FORMULARE BEENDEN ====
+        </form>
+    <?php } ?>
+<?php } ?>
+<?php } ?>
+
+ERKLÄRUNG:
+- "</form>" = Formular beenden
+
+- "<?php } ?>" = Ende des "if Fahrer vorhanden" Blocks
+- "<?php } ?>" = Ende des "if Rennen gewählt" Blocks
+- "<?php } ?>" = Ende der render-Phase
+- Das letzte "<?php } ?>" = Danach kommt die End-Klammer für die process-Phase
+
+
+================================================================================
+ZUSAMMENFASSUNG DER GESAMTEN DATEI
+================================================================================
+
+WAS MACHT DIESE DATEI?
+
+1. SICHERHEIT: Sie schützt sich vor direktem Aufruf (nur über Dashboard)
+
+2. VERARBEITUNG (process-Phase):
+   a) Prüft, ob ein Formular mit Ergebnissen abgesendet wurde
+   b) Validiert alle Eingaben (Platzierung muss positiv sein, Fahrtzeit Format prüfen)
+   c) Speichert alle Daten in einer Datenbank-Transaktion
+   d) Macht alles rückgängig, wenn was schief läuft
+   e) Lädt alle Rennen des Veranstalters
+   f) Lädt alle angemeldeten Fahrer für das gewählte Rennen
+
+3. ANZEIGE (render-Phase):
+   a) Zeigt ein Formular zur Auswahl eines Rennens
+   b) Wenn Rennen ausgewählt: zeigt eine Tabelle mit den Fahrern
+   c) Nicht erfasste Ergebnisse sind editierbar (Eingabefelder)
+   d) Bereits erfasste Ergebnisse sind schreibgeschützt (nur Anzeige)
+   e) Alles kann mit einem Button "Ergebnisse speichern" abgesendet werden
+
+
+DATENFLUSS:
+
+1. Benutzer öffnet die Seite
+2. Benutzer wählt ein Rennen aus dem Dropdown und klickt "Anzeigen"
+3. Seite lädt neu, zeigt die Fahrer dieses Rennens
+4. Benutzer gibt Platzierungen und Fahrtzeiten ein
+5. Benutzer klickt "Ergebnisse speichern"
+6. Formular wird mit POST abgesendet
+7. Server validiert ALLES nochmal
+8. Server speichert mit Transaktion
+9. Bei Erfolg: Erfolgs-Meldung zeigen
+10. Bei Fehler: Fehler-Meldung zeigen
+
+
+SICHERHEITS-FEATURES:
+
+1. Nur Veranstalter darf die Seite aufrufen (defined('VERANSTALTER_DASHBOARD'))
+2. Alle Eingaben werden validiert (Integer, Fahrtzeit-Format)
+3. Nur noch nicht erfasste Ergebnisse können geändert werden
+4. SQL-Befehle sind vorbereitet (?" statt Variablen direkt) = Schutz vor SQL-Injection
+5. Transaktionen = entweder alles oder nichts wird gespeichert
+6. Die richtige Renn-ID und der Veranstalter werden auf Server-Seite überprüft
+
+
+WICHTIGE FUNKTIONEN:
+
+- filter_var() = Validiere und konvertiere Daten
+- mysqli_prepare() = Vorbereitung von SQL-Befehlen
+- mysqli_stmt_bind_param() = Sichere Wertübergabe an SQL
+- mysqli_begin_transaction() / mysqli_commit() / mysqli_rollback() = Transaktionen
+- foreach = Schleife über Listen
+- $_POST, $_SERVER, $_GET = Daten vom Benutzer / Server-Infos
+- array() = Daten-Behälter für mehrere Werte
+- preg_match() = Muster-Abgleich (Regex)
+
+================================================================================
+ENDE DER ERKLÄRUNG
+================================================================================
