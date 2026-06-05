@@ -99,7 +99,11 @@ if ($dashboardPhase === 'process') {
         mysqli_stmt_bind_result($rennenListeStmt, $dbRennenId, $dbDatum, $dbStandort);
 
         while (mysqli_stmt_fetch($rennenListeStmt)) {
-            $veranstalterRennen[] = array('Renn_ID' => $dbRennenId, 'Datum' => $dbDatum, 'Standort' => $dbStandort);
+            $veranstalterRennen[] = array(
+                'Renn_ID' => $dbRennenId, 
+                'Datum' => $dbDatum, 
+                'Standort' => $dbStandort
+            );
         }
 
         mysqli_stmt_close($rennenListeStmt);
