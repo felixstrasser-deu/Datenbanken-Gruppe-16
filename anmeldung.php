@@ -10,7 +10,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
     exit;
 }
 
-if (($dashboardPhase ?? '') === 'process') {
+if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'anmeldung_speichern') {
         $rennenId = filter_var(post_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
         $fahrerIds = $_POST['anmeldung_fahrer'] ?? array();
@@ -51,7 +51,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 }
 
-if (($dashboardPhase ?? '') === 'render') {
+if (($dashboardPhase) === 'render') {
 ?>
 <hr>
 <h3 id="anmeldung">Fahrer zu Rennen anmelden</h3>

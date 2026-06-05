@@ -8,7 +8,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
     exit;
 }
 
-if (($dashboardPhase ?? '') === 'process') {
+if (($dashboardPhase) === 'process') {
     $meldungen = array('created' => 'Fahrer wurde angelegt.', 'updated' => 'Fahrer wurde aktualisiert.', 'deleted' => 'Fahrer wurde gelöscht.');
     $fehlertexte = array('exists' => 'Mitarbeiter-ID ist bereits vergeben.', 'notfound' => 'Fahrer wurde nicht gefunden.', 'error' => 'Aktion konnte nicht ausgeführt werden.');
     $status = get_value('status');
@@ -115,7 +115,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 }
 
-if (($dashboardPhase ?? '') === 'render') {
+if (($dashboardPhase) === 'render') {
 $inputs = array(
     'mitarbeiter_id' => array('Mitarbeiter-ID', 'number', '1', ''),
     'name' => array('Name', 'text', '', '50'),

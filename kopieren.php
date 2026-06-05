@@ -10,7 +10,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
     exit;
 }
 
-if (($dashboardPhase ?? '') === 'process') {
+if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'kopieren_speichern') {
         $quelle = filter_var(post_value('kopieren_quelle'), FILTER_VALIDATE_INT);
         $ziel = filter_var(post_value('kopieren_ziel'), FILTER_VALIDATE_INT);
@@ -79,7 +79,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 }
 
-if (($dashboardPhase ?? '') === 'render') {
+if (($dashboardPhase) === 'render') {
 ?>
 <hr>
 <h3 id="kopieren">Anmeldungen kopieren</h3>

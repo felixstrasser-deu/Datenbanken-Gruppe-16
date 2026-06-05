@@ -11,7 +11,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
 }
 
 // In der process-Phase werden Formulareingaben verarbeitet und benötigte Daten geladen.
-if (($dashboardPhase ?? '') === 'process') {
+if (($dashboardPhase) === 'process') {
 
     // Eingaben aus dem Formular sicher auslesen und Leerzeichen entfernen.
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'training_speichern') {
@@ -84,7 +84,7 @@ if (($dashboardPhase ?? '') === 'process') {
 }
 
 // In der render-Phase wird das Formular angezeigt.
-if (($dashboardPhase ?? '') === 'render') {
+if (($dashboardPhase) === 'render') {
 ?>
 <hr>
 <h3 id="training">Training erfassen</h3>

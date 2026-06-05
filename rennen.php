@@ -10,7 +10,7 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
     exit;
 }
 
-if (($dashboardPhase ?? '') === 'process') {
+if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && post_value('aktion') === 'rennen_speichern') {
         $datum = post_value('datum');
         $standort = post_value('standort');
@@ -47,7 +47,7 @@ if (($dashboardPhase ?? '') === 'process') {
     }
 }
 
-if (($dashboardPhase ?? '') === 'render') {
+if (($dashboardPhase) === 'render') {
 ?>
 <h3 id="rennenformular">Neues Rennen anlegen</h3>
 <form method="post" action="veranstalter_dashboard.php?bereich=rennen#rennenformular">

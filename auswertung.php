@@ -14,7 +14,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
 
 // In der process-Phase werden benötigte Daten geladen und Formularaktionen verarbeitet.
 // Standardwerte für Formularfilter und spätere Auswertung initialisieren.
-if (($dashboardPhase ?? '') === 'process') {
+if (($dashboardPhase) === 'process') {
     $auswertungStatistiken = array();
     $auswertungZiel = '';
     $auswertungVon = '';
@@ -79,7 +79,7 @@ if (($dashboardPhase ?? '') === 'process') {
 }
 
 // In der render-Phase wird das Formular und bei Bedarf die Ergebnis-Tabelle ausgegeben.
-if (($dashboardPhase ?? '') === 'render') {
+if (($dashboardPhase) === 'render') {
 ?>
 <hr>
 <h3 id="auswertung">Auswertung anzeigen</h3>
