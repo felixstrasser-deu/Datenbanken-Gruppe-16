@@ -153,7 +153,7 @@ function rennenErstellen($connection, $datum, $standort, $kilometer, $hoehenmete
 /*Johnny Germar*/
 function zukuenftigeRennen($connection, $rennenId)
 {
-    $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Radrennen WHERE `Renn_ID` = ? AND Datum > CURDATE() LIMIT 1');
+    $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Radrennen WHERE `Renn_ID` = ? AND Datum >= CURDATE() LIMIT 1');
     if (!$stmt) {
         return false;
     }
@@ -170,6 +170,21 @@ function zukuenftigeRennen($connection, $rennenId)
 /*Johnny Germar*/
 function fahrerAnmelden($connection, $rennenId, $team, $mitarbeiterId)
 {
+    $checkStmt = mysqli_prepare($connection, 'SELECT 1 FROM Anmeldung WHERE Radrennen = ? AND Team = ? AND Mitarbeiter = ? LIMIT 1');
+    if (!$checkStmt) {
+        return false;
+    }
+
+    mysqli_stmt_bind_param($checkStmt, 'isi', $rennenId, $team, $mitarbeiterId);
+    mysqli_stmt_execute($checkStmt);
+    mysqli_stmt_store_result($checkStmt);
+    $exists = mysqli_stmt_num_rows($checkStmt) > 0;
+    mysqli_stmt_close($checkStmt);
+
+    if ($exists) {
+        return false;
+    }
+
     $sql = 'INSERT INTO Anmeldung (`Startnummer`, `Platzierung`, `Fahrtzeit`, `PraemieTeam`, `PraemieVeranstalter`, `Radrennen`, `Team`, `Mitarbeiter`)
             VALUES (0, 0, \'00:00:00\', 0, 0, ?, ?, ?)';
     $stmt = mysqli_prepare($connection, $sql);
