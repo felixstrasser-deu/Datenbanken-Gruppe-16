@@ -21,8 +21,8 @@ if (isset($_SESSION['rolle'])) {
 
 define('INDEX_PAGE', true);
 $indexModuleFiles = array(
-    'login_teamchef.php',
-    'registrieren_teamchef.php',
+    'teamchef_login.php',
+    'teamchef_registrieren.php',
     'veranstalter_login.php',
     'veranstalter_registrieren.php'
 );
@@ -57,10 +57,10 @@ foreach ($indexModuleFiles as $moduleFile) {
     </tr>
     <tr>
         <td valign="top" width="50%">
-            <?php $indexPhase = 'render'; include 'login_teamchef.php'; ?>
+            <?php $indexPhase = 'render'; include 'teamchef_login.php'; ?>
         </td>
         <td valign="top" width="50%">
-            <?php $indexPhase = 'render'; include 'registrieren_teamchef.php'; ?>
+            <?php $indexPhase = 'render'; include 'teamchef_registrieren.php'; ?>
         </td>
     </tr>
 </table>

@@ -1,0 +1,586 @@
+================================================================================
+ERKLÄRUNG DER DATEI: TrainingStats.php
+Eine Anfänger-freundliche Erklärung der wichtigsten Code-Elemente
+================================================================================
+
+WAS MACHT DIESE DATEI?
+
+Die Datei TrainingStats.php enthält die Klasse TrainingStats.
+Diese Klasse wertet Trainingsdaten eines bestimmten Fahrers statistisch aus.
+
+Sie kann Trainingsdaten nach folgenden Kriterien filtern:
+- Fahrer-ID
+- Trainingsziel
+- Startdatum
+- Enddatum
+
+Danach berechnet sie pro Monat verschiedene Kennzahlen:
+- Anzahl der Trainings
+- Summe der Kilometer
+- Durchschnitt
+- Minimum
+- Maximum
+- Median
+- 25%-Quantil
+- 75%-Quantil
+- Standardabweichung
+
+Die Klasse wird nicht direkt im Browser angezeigt.
+Sie ist ein Hilfsbaustein für andere Dateien, zum Beispiel für eine Auswertungsseite.
+
+
+==== DATEI-HEADER ====
+<?php
+/*
+ * Autor: Magdalena Hamm
+ * Klasse zur statistischen Auswertung von Trainingsdaten eines Fahrers.
+ */
+
+ERKLÄRUNG:
+- "<?php" startet PHP-Code.
+- "/* ... */" ist ein Kommentarblock.
+- Der Kommentar beschreibt den Zweck der Datei:
+  Sie enthält eine Klasse zur statistischen Auswertung von Trainingsdaten.
+
+
+==== KLASSENDEFINITION ====
+class TrainingStats
+{
+
+ERKLÄRUNG:
+- "class" definiert eine Klasse.
+- Eine Klasse ist ein Bauplan für Objekte.
+- "TrainingStats" ist der Name der Klasse.
+- Alles zwischen "{" und der letzten "}" gehört zur Klasse.
+
+ZWECK:
+Die Klasse bündelt Daten und Funktionen, die zusammen zur Trainingsstatistik gehören.
+
+
+==== PRIVATE EIGENSCHAFTEN ====
+private $monatswerte = array();
+private $fahrerId;
+private $trainingsziel;
+private $von;
+private $bis;
+
+ERKLÄRUNG:
+- "private" bedeutet:
+  Diese Variablen können nur innerhalb der Klasse direkt verwendet werden.
+- "$monatswerte" speichert die geladenen Kilometerwerte gruppiert nach Monat.
+- "$fahrerId" speichert, für welchen Fahrer die Statistik berechnet wird.
+- "$trainingsziel" speichert einen optionalen Filter nach Trainingsziel.
+- "$von" speichert ein optionales Startdatum.
+- "$bis" speichert ein optionales Enddatum.
+
+BEISPIEL FÜR $monatswerte:
+[
+  '2026-04' => [32.5, 48.0, 25.0],
+  '2026-05' => [40.0, 60.0]
+]
+
+ZUSAMMENHANG:
+Die Daten werden zuerst geladen und gruppiert.
+Danach werden daraus Statistiken berechnet.
+
+
+==== KONSTRUKTOR ====
+public function __construct($fahrerId = null, $trainingsziel = '', $von = '', $bis = '')
+{
+    $this->fahrerId = $fahrerId;
+    $this->trainingsziel = $trainingsziel;
+    $this->von = $von;
+    $this->bis = $bis;
+}
+
+ERKLÄRUNG:
+- "__construct" ist eine besondere Methode.
+- Sie wird automatisch aufgerufen, wenn ein neues Objekt der Klasse erstellt wird.
+- "public" bedeutet:
+  Die Methode kann auch von außen aufgerufen werden.
+- Die Parameter haben Standardwerte.
+- Das bedeutet:
+  Man kann ein TrainingStats-Objekt auch ohne alle Filter erstellen.
+
+BEISPIEL:
+$stats = new TrainingStats(5, 'Ausdauer', '2026-01-01', '2026-12-31');
+
+Dabei bedeutet:
+- Fahrer-ID = 5
+- Trainingsziel = Ausdauer
+- Startdatum = 2026-01-01
+- Enddatum = 2026-12-31
+
+
+==== $this ERKLÄRT ====
+$this->fahrerId = $fahrerId;
+
+ERKLÄRUNG:
+- "$this" meint das aktuelle Objekt.
+- "->" greift auf eine Eigenschaft oder Methode eines Objekts zu.
+- "$this->fahrerId" ist die Eigenschaft im Objekt.
+- "$fahrerId" ist der Parameter, der an die Methode übergeben wurde.
+
+ZUSAMMENFASSUNG:
+Der übergebene Wert wird im Objekt gespeichert, damit andere Methoden später damit arbeiten können.
+
+
+==== SETTER UND GETTER FÜR FAHRER-ID ====
+public function setFahrerId($fahrerId) { $this->fahrerId = $fahrerId; }
+public function getFahrerId() { return $this->fahrerId; }
+
+ERKLÄRUNG:
+- "setFahrerId" setzt die Fahrer-ID.
+- "getFahrerId" gibt die Fahrer-ID zurück.
+- "return" gibt einen Wert an den aufrufenden Code zurück.
+
+ZWECK:
+Andere Dateien müssen die private Eigenschaft "$fahrerId" nicht direkt verändern.
+Sie verwenden stattdessen diese Methoden.
+
+
+==== SETTER UND GETTER FÜR TRAININGSZIEL ====
+public function setTrainingsziel($trainingsziel) { $this->trainingsziel = $trainingsziel; }
+public function getTrainingsziel() { return $this->trainingsziel; }
+
+ERKLÄRUNG:
+- "setTrainingsziel" setzt den optionalen Trainingsziel-Filter.
+- "getTrainingsziel" gibt den aktuellen Trainingsziel-Filter zurück.
+
+BEISPIEL:
+$stats->setTrainingsziel('Sprint');
+
+Danach werden bei der Datenbankauswertung nur Trainings mit dem Ziel "Sprint" berücksichtigt.
+
+
+==== ZEITRAUM SETZEN ====
+public function setZeitraum($von, $bis) { $this->von = $von; $this->bis = $bis; }
+
+ERKLÄRUNG:
+- "setZeitraum" setzt Startdatum und Enddatum.
+- "$von" ist das früheste erlaubte Datum.
+- "$bis" ist das späteste erlaubte Datum.
+
+ZWECK:
+Damit kann die Statistik auf einen bestimmten Zeitraum eingeschränkt werden.
+
+
+==== MONATSWERTE ZURÜCKGEBEN ====
+public function getMonatswerte() { return $this->monatswerte; }
+
+ERKLÄRUNG:
+- Diese Methode gibt die intern gespeicherten Monatswerte zurück.
+- Sie berechnet noch keine Statistik.
+- Sie liefert nur die Rohwerte gruppiert nach Monat.
+
+
+==== DATEN AUS DER DATENBANK LADEN ====
+public function loadFromDatabase($connection, $team)
+{
+
+ERKLÄRUNG:
+- "loadFromDatabase" lädt Trainingsdaten aus der Datenbank.
+- "$connection" ist die Datenbankverbindung.
+- "$team" ist das Team des eingeloggten Teamchefs.
+
+ZWECK:
+Die Methode lädt nur Daten des eigenen Teams und des ausgewählten Fahrers.
+
+
+==== PRÜFEN, OB EINE FAHRER-ID VORHANDEN IST ====
+if ($this->fahrerId === null || $this->fahrerId === '') {
+    return false;
+}
+
+ERKLÄRUNG:
+- Wenn keine Fahrer-ID gesetzt ist, kann keine fahrerbezogene Statistik geladen werden.
+- "null" bedeutet:
+  Es wurde kein Wert gesetzt.
+- "''" bedeutet:
+  Der Wert ist ein leerer Text.
+- "return false" beendet die Methode und meldet, dass das Laden nicht erfolgreich war.
+
+
+==== ALTE WERTE ZURÜCKSETZEN UND GRUNDFILTER ANLEGEN ====
+$this->monatswerte = array();
+$bedingungen = array('Fahrer.Team = ?', 'Training.Mitarbeiter = ?');
+$typen = 'si';
+$werte = array($team, (int) $this->fahrerId);
+
+ERKLÄRUNG:
+- "$this->monatswerte = array()" löscht alte Statistikdaten.
+- "$bedingungen" enthält SQL-Bedingungen für die WHERE-Klausel.
+- "Fahrer.Team = ?" sorgt dafür, dass nur Fahrer des aktuellen Teams betrachtet werden.
+- "Training.Mitarbeiter = ?" filtert auf den gewählten Fahrer.
+- "$typen" enthält die Datentypen für mysqli_stmt_bind_param.
+- "'si'" bedeutet:
+  - s = String für Team
+  - i = Integer für Fahrer-ID
+- "$werte" enthält die Werte, die später an die Platzhalter gebunden werden.
+- "(int)" wandelt die Fahrer-ID in eine ganze Zahl um.
+
+
+==== OPTIONALEN FILTER FÜR TRAININGSZIEL ERGÄNZEN ====
+if ($this->trainingsziel !== '') {
+    $bedingungen[] = 'Training.Trainingsziel = ?';
+    $typen .= 's';
+    $werte[] = $this->trainingsziel;
+}
+
+ERKLÄRUNG:
+- Diese Bedingung wird nur genutzt, wenn ein Trainingsziel gesetzt wurde.
+- "$bedingungen[]" fügt eine neue SQL-Bedingung zur Liste hinzu.
+- "$typen .= 's'" hängt einen weiteren String-Typ an.
+- "$werte[]" fügt den passenden Wert hinzu.
+
+ZWECK:
+Die SQL-Abfrage wird dynamisch erweitert.
+Wenn kein Trainingsziel gesetzt ist, wird auch nicht danach gefiltert.
+
+
+==== OPTIONALEN ZEITRAUM ERGÄNZEN ====
+if ($this->von !== '') {
+    $bedingungen[] = 'Training.Datum >= ?';
+    $typen .= 's';
+    $werte[] = $this->von;
+}
+if ($this->bis !== '') {
+    $bedingungen[] = 'Training.Datum <= ?';
+    $typen .= 's';
+    $werte[] = $this->bis;
+}
+
+ERKLÄRUNG:
+- Wenn "$von" gesetzt ist, werden nur Trainings ab diesem Datum geladen.
+- Wenn "$bis" gesetzt ist, werden nur Trainings bis zu diesem Datum geladen.
+- Datumswerte werden hier als Strings gebunden.
+
+BEISPIEL:
+Wenn "$von" 2026-01-01 ist, wird diese Bedingung ergänzt:
+
+Training.Datum >= ?
+
+
+==== SQL-ABFRAGE ERSTELLEN ====
+$sql = 'SELECT Training.Datum, Training.Kilometer
+        FROM Training, Fahrer
+        WHERE Training.Team = Fahrer.Team
+        AND Training.Mitarbeiter = Fahrer.Mitarbeiter_ID
+        AND ' . implode(' AND ', $bedingungen) . '
+        ORDER BY Training.Datum';
+
+ERKLÄRUNG:
+- Die Abfrage holt Datum und Kilometer aus der Tabelle Training.
+- Zusätzlich wird die Tabelle Fahrer verwendet.
+- Die Bedingungen stellen sicher:
+  - Training und Fahrer gehören zusammen.
+  - Nur das aktuelle Team wird betrachtet.
+  - Nur der ausgewählte Fahrer wird betrachtet.
+  - Optionale Filter werden berücksichtigt.
+- "implode(' AND ', $bedingungen)" verbindet alle Bedingungen mit "AND".
+- "ORDER BY Training.Datum" sortiert die Trainings nach Datum.
+
+BEISPIEL FÜR DYNAMISCHE BEDINGUNGEN:
+Wenn Trainingsziel, Startdatum und Enddatum gesetzt sind, entsteht sinngemäß:
+
+AND Fahrer.Team = ?
+AND Training.Mitarbeiter = ?
+AND Training.Trainingsziel = ?
+AND Training.Datum >= ?
+AND Training.Datum <= ?
+
+
+==== PREPARED STATEMENT VORBEREITEN ====
+$stmt = mysqli_prepare($connection, $sql);
+if (!$stmt) {
+    return false;
+}
+
+ERKLÄRUNG:
+- "mysqli_prepare(...)" bereitet die SQL-Abfrage sicher vor.
+- Wenn das nicht klappt, ist "$stmt" falsch.
+- "!$stmt" bedeutet:
+  Das Statement konnte nicht erstellt werden.
+- "return false" beendet die Methode mit Fehlerstatus.
+
+
+==== DYNAMISCHE PARAMETER VORBEREITEN ====
+$bindParams = array($typen);
+foreach ($werte as $key => $value) {
+    $bindParams[] = &$werte[$key];
+}
+
+ERKLÄRUNG:
+- "mysqli_stmt_bind_param" braucht zuerst den Typ-String, zum Beispiel "siss".
+- Danach folgen die Werte.
+- Da die Anzahl der Filter unterschiedlich sein kann, wird "$bindParams" dynamisch aufgebaut.
+- "&$werte[$key]" übergibt den Wert als Referenz.
+
+WARUM REFERENZEN?
+mysqli_stmt_bind_param erwartet Parameter als Referenzen.
+Deshalb wird hier das "&" verwendet.
+
+
+==== PARAMETER BINDEN UND ABFRAGE AUSFÜHREN ====
+call_user_func_array(array($stmt, 'bind_param'), $bindParams);
+mysqli_stmt_execute($stmt);
+mysqli_stmt_bind_result($stmt, $datum, $kilometer);
+
+ERKLÄRUNG:
+- "call_user_func_array(...)" ruft eine Funktion mit einer Liste von Parametern auf.
+- Hier wird damit "bind_param" aufgerufen.
+- Das ist nötig, weil die Anzahl der Parameter dynamisch ist.
+- "mysqli_stmt_execute(...)" führt die SQL-Abfrage aus.
+- "mysqli_stmt_bind_result(...)" legt fest, in welche Variablen die Ergebniswerte geschrieben werden.
+- "$datum" bekommt das Trainingsdatum.
+- "$kilometer" bekommt die Kilometerzahl.
+
+
+==== ERGEBNISSE NACH MONAT GRUPPIEREN ====
+while (mysqli_stmt_fetch($stmt)) {
+    $monat = substr($datum, 0, 7);
+    if (!isset($this->monatswerte[$monat])) {
+        $this->monatswerte[$monat] = array();
+    }
+    $this->monatswerte[$monat][] = (float) $kilometer;
+}
+
+ERKLÄRUNG:
+- "while (mysqli_stmt_fetch(...))" läuft durch alle gefundenen Trainings.
+- "$datum" hat zum Beispiel den Wert "2026-04-15".
+- "substr($datum, 0, 7)" nimmt die ersten 7 Zeichen.
+- Daraus wird "2026-04".
+- Dieser Wert wird als Monatsschlüssel verwendet.
+- "isset(...)" prüft, ob für diesen Monat schon eine Liste existiert.
+- Wenn nicht, wird eine neue leere Liste erstellt.
+- "(float)" wandelt Kilometer in eine Kommazahl um.
+- Die Kilometer werden zur Monatsliste hinzugefügt.
+
+BEISPIEL:
+Aus diesen Trainings:
+- 2026-04-10, 30 km
+- 2026-04-20, 50 km
+- 2026-05-01, 40 km
+
+wird:
+[
+  '2026-04' => [30.0, 50.0],
+  '2026-05' => [40.0]
+]
+
+
+==== STATEMENT SCHLIESSEN UND ERFOLG MELDEN ====
+mysqli_stmt_close($stmt);
+return true;
+
+ERKLÄRUNG:
+- "mysqli_stmt_close(...)" schließt die vorbereitete Abfrage.
+- "return true" meldet:
+  Das Laden aus der Datenbank war erfolgreich.
+
+
+==== MONATSSTATISTIK BERECHNEN ====
+public function getMonatsStatistik()
+{
+    $statistik = array();
+
+ERKLÄRUNG:
+- Diese Methode berechnet aus den geladenen Monatswerten die Kennzahlen.
+- "$statistik" ist die Ergebnisliste.
+
+WICHTIG:
+Vorher muss normalerweise "loadFromDatabase(...)" aufgerufen worden sein.
+Sonst enthält "$monatswerte" keine Daten.
+
+
+==== DURCH ALLE MONATE LAUFEN ====
+foreach ($this->monatswerte as $monat => $werte) {
+    $anzahl = count($werte);
+
+ERKLÄRUNG:
+- "foreach" läuft durch jeden Monat.
+- "$monat" ist zum Beispiel "2026-04".
+- "$werte" ist die Liste der Kilometerwerte dieses Monats.
+- "count($werte)" zählt, wie viele Trainings in diesem Monat vorhanden sind.
+
+
+==== KENNZAHLEN PRO MONAT SPEICHERN ====
+$statistik[$monat] = array(
+    'anzahl' => $anzahl,
+    'summe' => array_sum($werte),
+    'durchschnitt' => array_sum($werte) / $anzahl,
+    'minimum' => min($werte),
+    'maximum' => max($werte),
+    'median' => $this->quantil($werte, 0.5),
+    'quantil_25' => $this->quantil($werte, 0.25),
+    'quantil_75' => $this->quantil($werte, 0.75),
+    'standardabweichung' => $this->standardabweichung($werte),
+);
+
+ERKLÄRUNG:
+- "anzahl" = Anzahl der Trainings.
+- "summe" = gesamte Kilometer in diesem Monat.
+- "durchschnitt" = durchschnittliche Kilometer pro Training.
+- "minimum" = kleinster Kilometerwert.
+- "maximum" = größter Kilometerwert.
+- "median" = mittlerer Wert.
+- "quantil_25" = Wert, unter dem ungefähr 25 Prozent der Werte liegen.
+- "quantil_75" = Wert, unter dem ungefähr 75 Prozent der Werte liegen.
+- "standardabweichung" = Maß dafür, wie stark die Werte streuen.
+
+BEISPIEL:
+Für Werte [20, 40, 60]:
+- Anzahl = 3
+- Summe = 120
+- Durchschnitt = 40
+- Minimum = 20
+- Maximum = 60
+- Median = 40
+
+
+==== STATISTIK SORTIEREN UND ZURÜCKGEBEN ====
+ksort($statistik);
+return $statistik;
+
+ERKLÄRUNG:
+- "ksort(...)" sortiert ein Array nach seinen Schlüsseln.
+- Die Schlüssel sind hier Monate wie "2026-01", "2026-02", "2026-03".
+- Dadurch steht die Statistik chronologisch sortiert.
+- "return $statistik" gibt die fertige Monatsstatistik zurück.
+
+
+==== EINEN BESTIMMTEN MONAT AUSLESEN ====
+public function getMonatswert($monat)
+{
+    $statistik = $this->getMonatsStatistik();
+    return isset($statistik[$monat]) ? $statistik[$monat] : null;
+}
+
+ERKLÄRUNG:
+- Die Methode berechnet zuerst die Monatsstatistik.
+- Danach prüft sie, ob der gewünschte Monat existiert.
+- Wenn ja, wird die Statistik dieses Monats zurückgegeben.
+- Wenn nein, wird "null" zurückgegeben.
+- "null" bedeutet:
+  Es gibt keinen Wert.
+
+BEISPIEL:
+$stats->getMonatswert('2026-04');
+
+Das liefert nur die Statistik für April 2026.
+
+
+==== QUANTIL BERECHNEN ====
+public function quantil($werte, $q)
+{
+    sort($werte, SORT_NUMERIC);
+    $position = (count($werte) - 1) * $q;
+    $unten = (int) floor($position);
+    $oben = (int) ceil($position);
+
+ERKLÄRUNG:
+- Ein Quantil beschreibt eine Position innerhalb sortierter Werte.
+- "$q" ist der gewünschte Anteil.
+- 0.5 bedeutet Median.
+- 0.25 bedeutet 25%-Quantil.
+- 0.75 bedeutet 75%-Quantil.
+- "sort($werte, SORT_NUMERIC)" sortiert die Werte numerisch.
+- "$position" berechnet die genaue Position im Array.
+- "floor(...)" rundet ab.
+- "ceil(...)" rundet auf.
+
+
+==== QUANTIL: EXAKTE POSITION ====
+if ($unten === $oben) {
+    return $werte[$unten];
+}
+
+ERKLÄRUNG:
+- Wenn untere und obere Position gleich sind, liegt das Quantil genau auf einem vorhandenen Wert.
+- Dann kann dieser Wert direkt zurückgegeben werden.
+
+BEISPIEL:
+Bei [10, 20, 30] und q = 0.5 liegt die Position genau auf 20.
+
+
+==== QUANTIL: ZWISCHEN ZWEI WERTEN ====
+return $werte[$unten] * ($oben - $position) + $werte[$oben] * ($position - $unten);
+
+ERKLÄRUNG:
+- Manchmal liegt die berechnete Position zwischen zwei vorhandenen Werten.
+- Dann wird zwischen dem unteren und dem oberen Wert interpoliert.
+- Interpolieren bedeutet:
+  Es wird ein Zwischenwert berechnet.
+
+BEISPIEL:
+Bei [10, 20] und q = 0.5 liegt der Median zwischen beiden Werten.
+Das Ergebnis ist 15.
+
+
+==== STANDARDABWEICHUNG BERECHNEN ====
+public function standardabweichung($werte)
+{
+    $durchschnitt = array_sum($werte) / count($werte);
+    $summe = 0.0;
+
+ERKLÄRUNG:
+- Die Standardabweichung zeigt, wie stark Werte um den Durchschnitt streuen.
+- Zuerst wird der Durchschnitt berechnet.
+- "$summe" startet bei 0.0.
+- Dort werden gleich die quadratischen Abweichungen gesammelt.
+
+
+==== ABWEICHUNGEN AUFSUMMIEREN ====
+foreach ($werte as $wert) {
+    $summe += ($wert - $durchschnitt) ** 2;
+}
+
+ERKLÄRUNG:
+- Die Schleife läuft durch alle Kilometerwerte.
+- "$wert - $durchschnitt" berechnet die Abweichung vom Durchschnitt.
+- "** 2" quadriert diese Abweichung.
+- Quadrieren bedeutet:
+  Der Wert wird mit sich selbst multipliziert.
+- "$summe +=" addiert den berechneten Wert zur Summe.
+
+WARUM QUADRIEREN?
+Dadurch werden negative und positive Abweichungen beide positiv gezählt.
+
+
+==== STANDARDABWEICHUNG ZURÜCKGEBEN ====
+return sqrt($summe / count($werte));
+
+ERKLÄRUNG:
+- "$summe / count($werte)" berechnet die durchschnittliche quadratische Abweichung.
+- "sqrt(...)" zieht daraus die Quadratwurzel.
+- Das Ergebnis ist die Standardabweichung.
+
+BEDEUTUNG:
+- Kleine Standardabweichung:
+  Die Trainingskilometer sind sehr ähnlich.
+- Große Standardabweichung:
+  Die Trainingskilometer unterscheiden sich stark.
+
+
+================================================================================
+ZUSAMMENFASSUNG
+================================================================================
+
+TrainingStats.php stellt eine Klasse bereit, die Trainingsdaten eines Fahrers auswertet.
+
+Die Klasse:
+1. speichert Filter wie Fahrer, Trainingsziel und Zeitraum,
+2. lädt passende Trainingsdaten aus der Datenbank,
+3. gruppiert Kilometerwerte nach Monat,
+4. berechnet statistische Kennzahlen pro Monat.
+
+Wichtige Programmierkonzepte in dieser Datei:
+- Klassen und Objekte
+- private Eigenschaften
+- Konstruktor
+- Getter und Setter
+- Prepared Statements
+- dynamische SQL-Filter
+- Arrays
+- statistische Berechnungen
+

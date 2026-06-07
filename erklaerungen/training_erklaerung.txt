@@ -1,0 +1,493 @@
+================================================================================
+ERKLÄRUNG DER DATEI: training.php
+Eine Anfänger-freundliche Erklärung der wichtigsten Code-Elemente
+================================================================================
+
+WAS MACHT DIESE DATEI?
+
+Die Datei training.php ist ein Include-Modul für das Teamchef-Dashboard.
+Sie ermöglicht dem Teamchef, ein Training für einen Fahrer seines Teams zu erfassen.
+
+Der Benutzer wählt:
+- einen Fahrer
+- ein Datum
+- die gefahrenen Kilometer
+- ein Trainingsziel
+
+Danach wird das Training über eine Stored Procedure in der Datenbank gespeichert.
+
+Die Datei besteht aus zwei großen Bereichen:
+
+1. PROCESS-PHASE
+   Hier werden Formulareingaben geprüft, Trainingsdaten gespeichert und Auswahlwerte geladen.
+
+2. RENDER-PHASE
+   Hier wird das HTML-Formular im Browser angezeigt.
+
+
+==== DATEI-HEADER ====
+<?php
+/*
+ * Autor: Magdalena Hamm
+ * Dieses Modul verarbeitet und rendert die Trainingserfassung im Teamchef-Dashboard.
+ */
+
+ERKLÄRUNG:
+- "<?php" startet den PHP-Code.
+- "/* ... */" ist ein Kommentarblock.
+- Kommentare werden vom Computer ignoriert.
+- Sie helfen Menschen dabei, den Zweck der Datei schneller zu verstehen.
+- Der Kommentar sagt hier:
+  Diese Datei verarbeitet und zeigt die Trainingserfassung im Teamchef-Dashboard an.
+
+
+==== SICHERHEITS-SCHUTZ ====
+if (!defined('TEAMCHEF_DASHBOARD')) {
+    header('Location: teamchef_dashboard.php');
+    exit;
+}
+
+ERKLÄRUNG:
+- "defined('TEAMCHEF_DASHBOARD')" prüft, ob die Konstante TEAMCHEF_DASHBOARD existiert.
+- "!" bedeutet "nicht".
+- Die Bedingung bedeutet also:
+  Wenn TEAMCHEF_DASHBOARD nicht definiert ist, wurde die Datei wahrscheinlich direkt aufgerufen.
+- "header('Location: teamchef_dashboard.php')" leitet den Benutzer zum Dashboard weiter.
+- "exit;" beendet die Ausführung sofort.
+
+ZWECK:
+training.php soll nicht direkt im Browser geöffnet werden.
+Sie soll nur vom Teamchef-Dashboard eingebunden werden.
+
+
+==== PROCESS-PHASE STARTET ====
+if (($dashboardPhase) === 'process') {
+
+ERKLÄRUNG:
+- "$dashboardPhase" gibt an, in welcher Phase sich das Dashboard gerade befindet.
+- "process" bedeutet: Daten verarbeiten und vorbereiten.
+- "===" prüft, ob beide Werte genau gleich sind.
+
+ZUSAMMENHANG:
+Alles innerhalb dieses if-Blocks wird nur ausgeführt, wenn das Dashboard gerade Daten verarbeitet.
+Das passiert zum Beispiel, wenn ein Formular abgeschickt wurde.
+
+
+==== PRÜFEN, OB DAS TRAININGSFORMULAR ABGESENDET WURDE ====
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'training_speichern') {
+
+ERKLÄRUNG:
+- "$_SERVER['REQUEST_METHOD']" enthält die HTTP-Methode der Anfrage.
+- "POST" bedeutet:
+  Der Benutzer hat ein Formular abgeschickt.
+- "&&" bedeutet "und".
+- "$taskAction === 'training_speichern'" prüft, ob wirklich die Aktion zum Speichern eines Trainings gemeint ist.
+
+ZWECK:
+Das Dashboard kann mehrere Module enthalten.
+Durch "$taskAction" erkennt der Code, dass dieses Formular zur Trainingserfassung gehört.
+
+
+==== FORMULARWERTE AUSLESEN ====
+$datum = post_value('training_datum');
+$kilometer = post_value('training_kilometer');
+$trainingsziel = post_value('training_trainingsziel');
+$mitarbeiter = post_value('training_mitarbeiter');
+
+ERKLÄRUNG:
+- "$datum" speichert das Trainingsdatum.
+- "$kilometer" speichert die gefahrenen Kilometer.
+- "$trainingsziel" speichert das ausgewählte Trainingsziel.
+- "$mitarbeiter" speichert die Mitarbeiter-ID des Fahrers.
+- "post_value(...)" ist eine Hilfsfunktion.
+- Sie liest Werte aus dem abgeschickten Formular aus.
+
+WARUM EINE HILFSFUNKTION?
+Eine Hilfsfunktion sorgt dafür, dass Formularwerte einheitlich gelesen werden.
+Außerdem verhindert sie typischerweise Fehler, wenn ein Feld einmal nicht gesendet wurde.
+
+
+==== PFLICHTFELDER PRÜFEN ====
+if ($datum === '' || $kilometer === '' || $trainingsziel === '' || $mitarbeiter === '') {
+    $fehler = 'Bitte alle Trainingsfelder ausfüllen.';
+}
+
+ERKLÄRUNG:
+- "===" bedeutet "ist genau gleich".
+- "''" ist ein leerer Text.
+- "||" bedeutet "oder".
+- Die Bedingung prüft:
+  Ist mindestens eines der Pflichtfelder leer?
+
+WIRKUNG:
+Wenn ein Pflichtfeld leer ist, wird eine Fehlermeldung in "$fehler" gespeichert.
+Das Training wird dann nicht gespeichert.
+
+
+==== KILOMETER PRÜFEN ====
+elseif (!is_numeric($kilometer) || $kilometer <= 0) {
+    $fehler = 'Kilometer muss größer als 0 sein.';
+}
+
+ERKLÄRUNG:
+- "elseif" bedeutet:
+  Falls die vorherige Bedingung nicht zutrifft, prüfe diese neue Bedingung.
+- "is_numeric($kilometer)" prüft, ob der Wert eine Zahl ist.
+- "!" kehrt das Ergebnis um.
+- "!is_numeric($kilometer)" bedeutet also:
+  Der Wert ist keine Zahl.
+- "$kilometer <= 0" prüft, ob die Kilometer kleiner oder gleich 0 sind.
+
+ZWECK:
+Trainingskilometer müssen eine positive Zahl sein.
+0 Kilometer oder negative Kilometer ergeben für ein Training keinen Sinn.
+
+
+==== FAHRER-ID PRÜFEN ====
+elseif (!is_numeric($mitarbeiter)) {
+    $fehler = 'Ungültiger Fahrer.';
+}
+
+ERKLÄRUNG:
+- "$mitarbeiter" enthält die ID des ausgewählten Fahrers.
+- Diese ID muss eine Zahl sein.
+- Wenn sie keine Zahl ist, wird eine Fehlermeldung gesetzt.
+
+ZWECK:
+So wird verhindert, dass ungültige oder manipulierte Werte gespeichert werden.
+
+
+==== NUR BEI FEHLERFREIEN EINGABEN SPEICHERN ====
+if ($fehler === '') {
+
+ERKLÄRUNG:
+- "$fehler" enthält eine Fehlermeldung, wenn vorher etwas schiefgelaufen ist.
+- Ist "$fehler" leer, wurden keine Validierungsfehler gefunden.
+- Erst dann wird versucht, das Training in der Datenbank zu speichern.
+
+
+==== STORED PROCEDURE VORBEREITEN ====
+$stmt = mysqli_prepare($connection, 'CALL TrainingSpeichern(?, ?, ?, ?, ?, @status, @meldung)');
+
+ERKLÄRUNG:
+- "mysqli_prepare(...)" bereitet einen SQL-Befehl sicher vor.
+- "$connection" ist die Verbindung zur Datenbank.
+- "CALL TrainingSpeichern(...)" ruft eine Stored Procedure in der Datenbank auf.
+- Eine Stored Procedure ist ein gespeichertes Datenbankprogramm.
+- Die Fragezeichen "?" sind Platzhalter.
+- "@status" und "@meldung" sind Ausgabewerte der Stored Procedure.
+
+ZWECK:
+Die eigentliche Speicherlogik liegt in der Datenbank.
+PHP übergibt nur die geprüften Werte.
+
+
+==== PARAMETER BINDEN UND AUSFÜHREN ====
+mysqli_stmt_bind_param($stmt, 'sisds', $team, $mitarbeiter, $datum, $kilometer, $trainingsziel);
+mysqli_stmt_execute($stmt);
+mysqli_stmt_close($stmt);
+
+ERKLÄRUNG:
+- "mysqli_stmt_bind_param(...)" setzt die Platzhalter im SQL-Befehl.
+- "'sisds'" beschreibt die Datentypen:
+  - s = String, also Text
+  - i = Integer, also ganze Zahl
+  - s = String
+  - d = Double, also Kommazahl
+  - s = String
+- "$team" ist das Team des eingeloggten Teamchefs.
+- "$mitarbeiter" ist die Fahrer-ID.
+- "$datum" ist das Trainingsdatum.
+- "$kilometer" ist die Kilometerzahl.
+- "$trainingsziel" ist das ausgewählte Ziel.
+- "mysqli_stmt_execute(...)" führt die Stored Procedure aus.
+- "mysqli_stmt_close(...)" schließt die vorbereitete Anweisung.
+
+SICHERHEIT:
+Prepared Statements schützen vor SQL-Injection, weil Werte nicht direkt in den SQL-Text geschrieben werden.
+
+
+==== WEITERE DATENBANKERGEBNISSE ABRÄUMEN ====
+while (mysqli_more_results($connection)) {
+    mysqli_next_result($connection);
+}
+
+ERKLÄRUNG:
+- Stored Procedures können mehrere Ergebnisse erzeugen.
+- "mysqli_more_results(...)" prüft, ob noch weitere Ergebnisse vorhanden sind.
+- "mysqli_next_result(...)" geht zum nächsten Ergebnis weiter.
+
+ZWECK:
+Die Verbindung wird aufgeräumt, damit danach wieder eine neue SQL-Abfrage ausgeführt werden kann.
+Das ist bei MySQL nach Stored Procedures wichtig.
+
+
+==== STATUS UND MELDUNG DER STORED PROCEDURE AUSLESEN ====
+$result = mysqli_query($connection, 'SELECT @status AS status, @meldung AS meldung');
+$row = mysqli_fetch_assoc($result);
+
+ERKLÄRUNG:
+- "mysqli_query(...)" führt eine normale SQL-Abfrage aus.
+- "SELECT @status AS status, @meldung AS meldung" liest die Ausgabewerte der Stored Procedure.
+- "mysqli_fetch_assoc(...)" holt die Ergebniszeile als assoziatives Array.
+
+BEISPIEL:
+Wenn die Stored Procedure erfolgreich war, könnte "$row" so aussehen:
+
+[
+  'status' => 'OK',
+  'meldung' => 'Training wurde gespeichert.'
+]
+
+
+==== ERFOLG ODER FEHLER SETZEN ====
+if ($row && $row['status'] === 'OK') {
+    $meldung = $row['meldung'];
+} else {
+    $fehler = $row ? $row['meldung'] : 'Training konnte nicht gespeichert werden.';
+}
+
+ERKLÄRUNG:
+- "$row" prüft, ob überhaupt ein Ergebnis vorhanden ist.
+- "$row['status'] === 'OK'" prüft, ob die Datenbank Erfolg gemeldet hat.
+- Bei Erfolg wird "$meldung" gesetzt.
+- Bei einem Fehler wird "$fehler" gesetzt.
+- Der Ausdruck "$row ? ... : ..." ist eine Kurzform für if/else.
+
+ZWECK:
+Der Benutzer bekommt später eine passende Rückmeldung:
+entweder eine Erfolgsmeldung oder eine Fehlermeldung.
+
+
+==== FEHLER BEIM VORBEREITEN ====
+else {
+    $fehler = 'Training konnte nicht vorbereitet werden.';
+}
+
+ERKLÄRUNG:
+Dieser else-Block gehört zu "if ($stmt)".
+Wenn das Prepared Statement nicht erstellt werden konnte, wird eine Fehlermeldung gesetzt.
+
+MÖGLICHE URSACHEN:
+- Die Stored Procedure existiert nicht.
+- Die Datenbankverbindung ist fehlerhaft.
+- Der SQL-Aufruf enthält einen Fehler.
+
+
+==== FAHRER DES AKTUELLEN TEAMS LADEN ====
+$trainingFahrer = array();
+$fahrerStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name');
+
+ERKLÄRUNG:
+- "$trainingFahrer" ist eine leere Liste.
+- In diese Liste kommen alle Fahrer des aktuellen Teams.
+- Der SQL-Befehl lautet:
+
+SELECT Mitarbeiter_ID, Name FROM Fahrer WHERE Team = ? ORDER BY Name
+
+SQL-BEFEHL ERKLÄRT:
+- "SELECT Mitarbeiter_ID, Name" = Hole die ID und den Namen.
+- "FROM Fahrer" = Aus der Tabelle Fahrer.
+- "WHERE Team = ?" = Nur Fahrer aus dem aktuellen Team.
+- "ORDER BY Name" = Sortiere alphabetisch nach Name.
+
+
+==== FAHRER-ABFRAGE AUSFÜHREN ====
+if ($fahrerStmt) {
+    mysqli_stmt_bind_param($fahrerStmt, 's', $team);
+    mysqli_stmt_execute($fahrerStmt);
+    mysqli_stmt_bind_result($fahrerStmt, $fahrerId, $fahrerName);
+
+    while (mysqli_stmt_fetch($fahrerStmt)) {
+        $trainingFahrer[] = array('Mitarbeiter_ID' => $fahrerId, 'Name' => $fahrerName);
+    }
+
+    mysqli_stmt_close($fahrerStmt);
+}
+
+ERKLÄRUNG:
+- "if ($fahrerStmt)" prüft, ob die Vorbereitung erfolgreich war.
+- "mysqli_stmt_bind_param(...)" setzt den Team-Platzhalter.
+- "'s'" bedeutet: Der Teamwert ist ein String.
+- "mysqli_stmt_execute(...)" führt die Abfrage aus.
+- "mysqli_stmt_bind_result(...)" legt fest, in welche Variablen die Ergebnisse geschrieben werden.
+- "while (mysqli_stmt_fetch(...))" läuft durch alle gefundenen Fahrer.
+- Jeder Fahrer wird als Array in "$trainingFahrer" gespeichert.
+
+BEISPIEL:
+[
+  ['Mitarbeiter_ID' => 1, 'Name' => 'Anna'],
+  ['Mitarbeiter_ID' => 2, 'Name' => 'Ben']
+]
+
+
+==== TRAININGSZIELE LADEN ====
+$trainingZiele = array();
+$zielResult = mysqli_query($connection, 'SELECT Trainingsziel FROM Trainingsziel ORDER BY Trainingsziel');
+
+ERKLÄRUNG:
+- "$trainingZiele" ist eine leere Liste.
+- "mysqli_query(...)" führt eine direkte SQL-Abfrage aus.
+- Die Tabelle "Trainingsziel" enthält mögliche Trainingsziele.
+- "ORDER BY Trainingsziel" sortiert die Ziele alphabetisch.
+
+
+==== TRAININGSZIELE IN LISTE SPEICHERN ====
+if ($zielResult) {
+    while ($row = mysqli_fetch_assoc($zielResult)) {
+        $trainingZiele[] = $row['Trainingsziel'];
+    }
+}
+
+ERKLÄRUNG:
+- "if ($zielResult)" prüft, ob die Abfrage erfolgreich war.
+- "mysqli_fetch_assoc(...)" holt jeweils eine Zeile als Array.
+- "$row['Trainingsziel']" enthält den Namen des Trainingsziels.
+- Dieser Wert wird in "$trainingZiele" gespeichert.
+
+ZWECK:
+Die Trainingsziele werden später im Formular als Dropdown angezeigt.
+
+
+==== RENDER-PHASE STARTET ====
+if (($dashboardPhase) === 'render') {
+?>
+
+ERKLÄRUNG:
+- "render" bedeutet: HTML im Browser ausgeben.
+- Der PHP-Block wird mit "?>" beendet.
+- Danach folgt normales HTML.
+
+ZUSAMMENHANG:
+In der Render-Phase wird das Formular angezeigt, mit dem ein Teamchef ein Training eintragen kann.
+
+
+==== ÜBERSCHRIFT UND FORMULAR ====
+<hr>
+<h3 id="training">Training erfassen</h3>
+<form method="post" action="teamchef_dashboard.php#training">
+
+ERKLÄRUNG:
+- "<hr>" erzeugt eine Trennlinie.
+- "<h3>" ist eine Überschrift.
+- "id=\"training\"" ist ein Sprungziel auf der Seite.
+- "<form>" startet ein Formular.
+- "method=\"post\"" bedeutet:
+  Die Formulardaten werden per POST gesendet.
+- "action=\"teamchef_dashboard.php#training\"" bedeutet:
+  Nach dem Absenden wird wieder das Dashboard geladen und direkt zum Trainingsbereich gesprungen.
+
+
+==== VERSTECKTE STEUERFELDER ====
+<input type="hidden" name="bereich" value="training">
+<input type="hidden" name="task_action" value="training_speichern">
+
+ERKLÄRUNG:
+- "type=\"hidden\"" bedeutet:
+  Dieses Eingabefeld ist für den Benutzer nicht sichtbar.
+- "bereich" sagt dem Dashboard, welcher Bereich gemeint ist.
+- "task_action" sagt dem Code, welche Aktion ausgeführt werden soll.
+
+ZWECK:
+Ohne diese versteckten Felder wüsste das Dashboard nicht sicher, welches Formular abgesendet wurde.
+
+
+==== FAHRER-DROPDOWN ====
+<label for="training_mitarbeiter">Fahrer:</label><br>
+<select name="training_mitarbeiter" id="training_mitarbeiter" required>
+    <option value="">Bitte wählen</option>
+    <?php foreach ($trainingFahrer as $fahrerOption) { ?>
+        <option value="<?php echo e($fahrerOption['Mitarbeiter_ID']); ?>">
+            <?php echo e($fahrerOption['Mitarbeiter_ID'] . ' - ' . $fahrerOption['Name']); ?>
+        </option>
+    <?php } ?>
+</select>
+
+ERKLÄRUNG:
+- "<label>" beschriftet das Eingabefeld.
+- "<select>" erstellt ein Dropdown-Menü.
+- "required" bedeutet:
+  Der Benutzer muss einen Fahrer auswählen.
+- Die erste Option "Bitte wählen" ist ein leerer Platzhalter.
+- "foreach" läuft durch alle Fahrer in "$trainingFahrer".
+- Für jeden Fahrer wird eine "<option>" erzeugt.
+- "value" enthält die Mitarbeiter-ID.
+- Angezeigt wird die Mitarbeiter-ID zusammen mit dem Namen.
+
+WICHTIG:
+"e(...)" ist eine Escape-Funktion.
+Sie sorgt dafür, dass Daten sicher als HTML ausgegeben werden.
+Das schützt vor unerwünschtem HTML oder JavaScript in der Ausgabe.
+
+
+==== DATUMSFELD ====
+<input type="date" name="training_datum" id="training_datum" required>
+
+ERKLÄRUNG:
+- "type=\"date\"" erzeugt ein Datumsfeld.
+- Browser zeigen dafür meistens einen Kalender an.
+- "name=\"training_datum\"" ist der Name, unter dem das Feld per POST gesendet wird.
+- "required" macht das Feld zum Pflichtfeld.
+
+
+==== KILOMETERFELD ====
+<input type="number" step="0.01" min="0.01" name="training_kilometer" id="training_kilometer" required>
+
+ERKLÄRUNG:
+- "type=\"number\"" erlaubt eine Zahleneingabe.
+- "step=\"0.01\"" erlaubt zwei Nachkommastellen.
+- "min=\"0.01\"" erlaubt nur Werte ab 0,01.
+- "required" macht das Feld zum Pflichtfeld.
+
+ZUSAMMENHANG:
+Die HTML-Prüfung hilft dem Benutzer direkt im Browser.
+Die PHP-Prüfung im Process-Teil ist trotzdem wichtig, weil Browserprüfungen umgangen werden können.
+
+
+==== TRAININGSZIEL-DROPDOWN ====
+<select name="training_trainingsziel" id="training_trainingsziel" required>
+    <option value="">Bitte wählen</option>
+    <?php foreach ($trainingZiele as $zielOption) { ?>
+        <option value="<?php echo e($zielOption); ?>"><?php echo e($zielOption); ?></option>
+    <?php } ?>
+</select>
+
+ERKLÄRUNG:
+- "$trainingZiele" enthält alle geladenen Trainingsziele.
+- "foreach" erstellt für jedes Ziel eine Auswahlmöglichkeit.
+- "e($zielOption)" gibt das Ziel sicher im HTML aus.
+
+
+==== SPEICHERBUTTON ====
+<button type="submit">Training speichern</button>
+
+ERKLÄRUNG:
+- "<button>" erzeugt einen Button.
+- "type=\"submit\"" bedeutet:
+  Beim Klick wird das Formular abgeschickt.
+- Danach startet im Dashboard wieder die Process-Phase.
+
+
+==== PHP-BLOCK SCHLIESSEN ====
+<?php } ?>
+
+ERKLÄRUNG:
+- Hier wird der if-Block der Render-Phase beendet.
+- Danach ist die Datei fertig.
+
+
+================================================================================
+ZUSAMMENFASSUNG
+================================================================================
+
+training.php macht drei Hauptaufgaben:
+
+1. Sie prüft abgesendete Trainingsdaten.
+2. Sie speichert gültige Trainingsdaten über die Stored Procedure TrainingSpeichern.
+3. Sie lädt Fahrer und Trainingsziele und zeigt daraus ein Formular im Teamchef-Dashboard an.
+
+Wichtige Sicherheitsaspekte:
+- Direkter Aufruf wird verhindert.
+- Eingaben werden geprüft.
+- Datenbankwerte werden über Prepared Statements gebunden.
+- Ausgaben werden mit e(...) für HTML abgesichert.
