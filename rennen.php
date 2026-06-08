@@ -12,8 +12,10 @@ if (!defined('VERANSTALTER_DASHBOARD')) {
 
 if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && post_value('aktion') === 'rennen_speichern') {
+        // post_value liest die Werte aus dem abgeschickten Formular.
         $datum = post_value('datum');
         $standort = post_value('standort');
+        // filter_var prüft, ob die Zahlen wirklich den erwarteten Datentyp haben.
         $kilometer = filter_var(post_value('kilometer'), FILTER_VALIDATE_INT);
         $hoehenmeter = filter_var(post_value('hoehenmeter'), FILTER_VALIDATE_INT);
         $maxSteigung = filter_var(post_value('max_steigung'), FILTER_VALIDATE_FLOAT);
@@ -22,25 +24,31 @@ if (($dashboardPhase) === 'process') {
             $fehler = 'Bitte alle Renndaten gültig ausfüllen.';
         } elseif ($kilometer <= 0 || $hoehenmeter < 0 || $maxSteigung < 0) {
             $fehler = 'Kilometer muss größer 0 sein; Höhenmeter und Steigung dürfen nicht negativ sein.';
+        // strlen zählt die Zeichen im Standort.
         } elseif (strlen($standort) > 50) {
             $fehler = 'Der Standort darf maximal 50 Zeichen lang sein.';
         } else {
+            // rennenErstellen führt das Einfügen des neuen Rennens in die Datenbank aus.
             if (rennenErstellen($connection, $datum, $standort, $kilometer, $hoehenmeter, $maxSteigung, $nameRaw)) {
                 $meldung = 'Rennen wurde gespeichert.';
             } else {
+                // mysqli_error liefert die letzte Fehlermeldung der Datenbank.
                 $fehler = 'Rennen konnte nicht gespeichert werden: ' . mysqli_error($connection);
             }
         }
     }
 
+    // Leeres Array für die kommenden Rennen erstellen.
     $kommendeRennen = array();
     $rennenSql = 'SELECT `Renn_ID`, Datum, Standort, Kilometer, `Hoehenmeter` AS Hoehenmeter, MaxSteigung
                   FROM Radrennen
                   WHERE Datum >= CURDATE()
                   ORDER BY Datum ASC, `Renn_ID` ASC';
+    // mysqli_query führt die SELECT-Abfrage in der Datenbank aus.
     $rennenResult = mysqli_query($connection, $rennenSql);
 
     if ($rennenResult) {
+        // mysqli_fetch_assoc holt jede Ergebniszeile als Array mit Spaltennamen.
         while ($row = mysqli_fetch_assoc($rennenResult)) {
             $kommendeRennen[] = $row;
         }
@@ -78,6 +86,7 @@ if (($dashboardPhase) === 'render') {
 </form>
 
 <h3>Zukünftige Rennen</h3>
+<!-- count zählt, wie viele zukünftige Rennen im Array gespeichert sind. -->
 <?php if (count($kommendeRennen) === 0) { ?>
     <p>Keine zukünftigen Rennen vorhanden.</p>
 <?php } else { ?>
@@ -92,6 +101,7 @@ if (($dashboardPhase) === 'render') {
         </tr>
         <?php foreach ($kommendeRennen as $rennen) { ?>
             <tr>
+                <!-- e sorgt bei allen folgenden Datenbankwerten für eine sichere Ausgabe. -->
                 <td><?php echo e($rennen['Renn_ID']); ?></td>
                 <td><?php echo e($rennen['Datum']); ?></td>
                 <td><?php echo e($rennen['Standort']); ?></td>

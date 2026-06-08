@@ -12,6 +12,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
 
 if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'kopieren_speichern') {
+        // post_value liest das Formularfeld und filter_var prüft auf eine ganze Zahl.
         $quelle = filter_var(post_value('kopieren_quelle'), FILTER_VALIDATE_INT);
         $ziel = filter_var(post_value('kopieren_ziel'), FILTER_VALIDATE_INT);
 
@@ -19,22 +20,31 @@ if (($dashboardPhase) === 'process') {
             $fehler = 'Bitte Quell- und Zielrennen auswählen.';
         } elseif ($quelle === $ziel) {
             $fehler = 'Quelle und Ziel müssen unterschiedliche Rennen sein.';
+        // zukuenftigeRennen prüft, ob das Zielrennen noch nicht vorbei ist.
         } elseif (!zukuenftigeRennen($connection, $ziel)) {
             $fehler = 'Das Zielrennen muss ein zukünftiges Rennen sein.';
         } else {
+            // mysqli_prepare bereitet die Abfrage mit Platzhaltern sicher vor.
             $sourceStmt = mysqli_prepare($connection, 'SELECT Mitarbeiter FROM Anmeldung WHERE Radrennen = ? AND Team = ? ORDER BY Startnummer');
             if ($sourceStmt) {
+                // bind_param setzt Renn-ID und Team in die Platzhalter ein.
                 mysqli_stmt_bind_param($sourceStmt, 'is', $quelle, $team);
+                // execute führt die vorbereitete Abfrage aus.
                 mysqli_stmt_execute($sourceStmt);
+                // bind_result verbindet die Ergebnisspalte mit der Variable.
                 mysqli_stmt_bind_result($sourceStmt, $mitarbeiterId);
 
+                // Leeres Array für die gefundenen Fahrer-IDs erstellen.
                 $fahrerIds = array();
+                // fetch liest die gefundenen Fahrer nacheinander aus.
                 while (mysqli_stmt_fetch($sourceStmt)) {
                     $fahrerIds[] = (int) $mitarbeiterId;
                 }
 
+                // close beendet das Statement nach der Benutzung.
                 mysqli_stmt_close($sourceStmt);
 
+                // count zählt die gefundenen Fahrer-IDs.
                 if (count($fahrerIds) === 0) {
                     $fehler = 'Für das Quellrennen gibt es keine Anmeldungen dieses Teams.';
                 } else {
@@ -42,6 +52,7 @@ if (($dashboardPhase) === 'process') {
                     $uebersprungen = 0;
 
                     foreach ($fahrerIds as $fahrerId) {
+                        // fahrerAnmelden speichert den Fahrer beim Zielrennen mit neuer Startnummer.
                         if (fahrerAnmelden($connection, $ziel, $team, $fahrerId)) {
                             $kopiert++;
                         } else {
@@ -62,14 +73,18 @@ if (($dashboardPhase) === 'process') {
         }
     }
 
+    // Alle Rennen für die Auswahl des Quellrennens laden.
     $kopierenAlleRennen = array();
+    // mysqli_query führt die SQL-Abfrage direkt aus.
     $alleRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen ORDER BY Datum DESC, `Renn_ID` DESC');
     if ($alleRennenResult) {
+        // fetch_assoc liefert jede Zeile als Array mit den Spaltennamen.
         while ($row = mysqli_fetch_assoc($alleRennenResult)) {
             $kopierenAlleRennen[] = $row;
         }
     }
 
+    // Für das Ziel werden nur heutige und zukünftige Rennen geladen.
     $kopierenZielRennen = array();
     $zielRennenResult = mysqli_query($connection, 'SELECT `Renn_ID`, Datum, Standort FROM Radrennen WHERE Datum >= CURDATE() ORDER BY Datum, `Renn_ID`');
     if ($zielRennenResult) {
@@ -91,6 +106,7 @@ if (($dashboardPhase) === 'render') {
     <select name="kopieren_quelle" id="kopieren_quelle" required>
         <option value="">Bitte wählen</option>
         <?php foreach ($kopierenAlleRennen as $rennenEintrag) { ?>
+            <!-- e gibt die Daten sicher im HTML aus. -->
             <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>">
                 <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
             </option>

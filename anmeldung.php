@@ -12,22 +12,28 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
 
 if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'anmeldung_speichern') {
+        // post_value liest den Formularwert und filter_var prueft, ob es eine ganze Zahl ist.
         $rennenId = filter_var(post_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
+        // Falls keine Fahrer gesendet wurden, wird ein leeres Array verwendet.
         $fahrerIds = $_POST['anmeldung_fahrer'] ?? array();
         $gespeichert = 0;
         $uebersprungen = 0;
 
         if ($rennenId === false || $rennenId <= 0) {
             $fehler = 'Bitte ein gültiges Rennen auswählen.';
+        // zukuenftigeRennen prueft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
         } elseif (!zukuenftigeRennen($connection, $rennenId)) {
             $fehler = 'Bitte ein zukünftiges Rennen auswählen.';
         } else {
+            // Alle ausgewählten Fahrer werden nacheinander bearbeitet.
             foreach ($fahrerIds as $fahrerIdRaw) {
+                // Auch jede Fahrer-ID wird als ganze Zahl geprüft.
                 $fahrerId = filter_var($fahrerIdRaw, FILTER_VALIDATE_INT);
                 if ($fahrerId === false || $fahrerId <= 0) {
                     continue;
                 }
 
+                // fahrerAnmelden speichert den Fahrer und vergibt dabei die Startnummer.
                 if (fahrerAnmelden($connection, $rennenId, $team, $fahrerId)) {
                     $gespeichert++;
                 } else {
@@ -42,8 +48,11 @@ if (($dashboardPhase) === 'process') {
         }
     }
 
+    // fahrerZuTeam liefert nur die Fahrer des angemeldeten Teams.
     $anmeldungFahrer = fahrerZuTeam($connection, $team);
+    // listeRennen liefert hier nur zukünftige Rennen, weil true übergeben wird.
     $anmeldungRennen = listeRennen($connection, true);
+    // get_value liest die Werte aus der URL, filter_var prüft wieder auf ganze Zahlen.
     $anmeldungRennenId = filter_var(get_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
     $anmeldungAnzahl = filter_var(get_value('anmeldung_anzahl'), FILTER_VALIDATE_INT);
     if ($anmeldungAnzahl === false || $anmeldungAnzahl < 1) {
@@ -61,6 +70,7 @@ if (($dashboardPhase) === 'render') {
     <select name="anmeldung_rennen_id" id="anmeldung_rennen_id" required>
         <option value="">Bitte wählen</option>
         <?php foreach ($anmeldungRennen as $rennenEintrag) { ?>
+            <!-- e gibt Daten sicher im HTML aus und verhindert ausführbaren HTML-Code. -->
             <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>" <?php if ((string) $anmeldungRennenId === (string) $rennenEintrag['Renn_ID']) echo 'selected'; ?>>
                 <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
             </option>
@@ -76,6 +86,7 @@ if (($dashboardPhase) === 'render') {
 </form>
 
 <?php if ($anmeldungRennenId !== false && $anmeldungRennenId > 0 && $anmeldungAnzahl > 0) { ?>
+    <!-- count zählt die Fahrer im Array. -->
     <?php if (count($anmeldungFahrer) === 0) { ?>
         <p>Für dieses Team sind keine Fahrer angelegt.</p>
     <?php } else { ?>
@@ -88,6 +99,7 @@ if (($dashboardPhase) === 'render') {
                     <th>Nr.</th>
                     <th>Fahrer</th>
                 </tr>
+                <!-- Die Schleife erstellt genau so viele Zeilen wie vorher eingegeben wurden. -->
                 <?php for ($i = 0; $i < $anmeldungAnzahl; $i++) { ?>
                     <tr>
                         <td><?php echo e($i + 1); ?></td>
