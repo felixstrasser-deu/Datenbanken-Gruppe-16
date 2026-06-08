@@ -12,7 +12,7 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
 
 if (($dashboardPhase) === 'process') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'anmeldung_speichern') {
-        // post_value liest den Formularwert und filter_var prueft, ob es eine ganze Zahl ist.
+        // post_value liest den Formularwert und filter_var prüft, ob es eine ganze Zahl ist.
         $rennenId = filter_var(post_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
         // Falls keine Fahrer gesendet wurden, wird ein leeres Array verwendet.
         $fahrerIds = $_POST['anmeldung_fahrer'] ?? array();
@@ -21,7 +21,7 @@ if (($dashboardPhase) === 'process') {
 
         if ($rennenId === false || $rennenId <= 0) {
             $fehler = 'Bitte ein gültiges Rennen auswählen.';
-        // zukuenftigeRennen prueft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
+        // zukünftigeRennen prüft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
         } elseif (!zukuenftigeRennen($connection, $rennenId)) {
             $fehler = 'Bitte ein zukünftiges Rennen auswählen.';
         } else {

@@ -6,8 +6,9 @@
 
 class TrainingStats
 {
-    // Interne Filter- und Ergebniswerte für die spätere Datenbankauswertung.
+    // Speichert Rohwerte, berechnete Monatsstatistik und die gesetzten Filter.
     private $monatswerte = array();
+    private $monatsStatistik = array();
     private $fahrerId;
     private $trainingsziel;
     private $von;
@@ -37,10 +38,10 @@ class TrainingStats
     // Setzt den optionalen Auswertungszeitraum mit Start- und Enddatum.
     public function setZeitraum($von, $bis) { $this->von = $von; $this->bis = $bis; }
 
-    // Gibt die geladenen Kilometerwerte gruppiert nach Monat zurück.
+    // Gibt die geladenen Kilometer-Rohwerte gruppiert nach Monat zurück.
     public function getMonatswerte() { return $this->monatswerte; }
 
-    // Lädt die Trainingsdaten des gewählten Fahrers aus der Datenbank und gruppiert sie nach Monat.
+    // Lädt die Trainingsdaten des gewählten Fahrers, gruppiert sie nach Monat und berechnet anschließend die Monatsstatistik.
     public function loadFromDatabase($connection, $team)
     {
 
@@ -49,8 +50,9 @@ class TrainingStats
             return false;
         }
 
-        // Alte Werte zurücksetzen und Grundfilter für Team und Fahrer vorbereiten.
+        // Alte Rohwerte und alte Statistik löschen, bevor neue Daten geladen werden.
         $this->monatswerte = array();
+        $this->monatsStatistik = array();
         $bedingungen = array('Fahrer.Team = ?', 'Training.Mitarbeiter = ?');
         $typen = 'si';
         $werte = array($team, (int) $this->fahrerId);
@@ -95,7 +97,7 @@ class TrainingStats
         mysqli_stmt_execute($stmt);
         mysqli_stmt_bind_result($stmt, $datum, $kilometer);
 
-        // Ergebnisse nach Monat gruppieren.
+        // Kilometer-Rohwerte nach Monat gruppieren, zum Beispiel 2026-06.
         while (mysqli_stmt_fetch($stmt)) {
             $monat = substr($datum, 0, 7);
             if (!isset($this->monatswerte[$monat])) {
@@ -105,17 +107,18 @@ class TrainingStats
         }
 
         mysqli_stmt_close($stmt);
+        $this->berechneMonatsStatistik();
         return true;
     }
 
-    // Berechnet für jeden Monat statistische Kennzahlen aus den geladenen Kilometerwerten.
-    public function getMonatsStatistik()
+    // Berechnet für jeden Monat die Kennzahlen und speichert sie in $monatsStatistik.
+    private function berechneMonatsStatistik()
     {
-        $statistik = array();
+        $this->monatsStatistik = array();
 
         foreach ($this->monatswerte as $monat => $werte) {
             $anzahl = count($werte);
-            $statistik[$monat] = array(
+            $this->monatsStatistik[$monat] = array(
                 'anzahl' => $anzahl,
                 'summe' => array_sum($werte),
                 'durchschnitt' => array_sum($werte) / $anzahl,
@@ -128,15 +131,19 @@ class TrainingStats
             );
         }
 
-        ksort($statistik);
-        return $statistik;
+        ksort($this->monatsStatistik);
     }
 
-    // Gibt die berechnete Statistik für einen bestimmten Monat zurück.
+    // Gibt die gespeicherte Monatsstatistik für alle Monate zurück.
+    public function getMonatsStatistik()
+    {
+        return $this->monatsStatistik;
+    }
+
+    // Gibt die gespeicherte Statistik für einen bestimmten Monat zurück.
     public function getMonatswert($monat)
     {
-        $statistik = $this->getMonatsStatistik();
-        return isset($statistik[$monat]) ? $statistik[$monat] : null;
+        return isset($this->monatsStatistik[$monat]) ? $this->monatsStatistik[$monat] : null;
     }
 
     // Berechnet ein Quantil, zum Beispiel den Median oder das 25%- bzw. 75%-Quantil.

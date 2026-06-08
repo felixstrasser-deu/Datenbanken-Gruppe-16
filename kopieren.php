@@ -20,7 +20,7 @@ if (($dashboardPhase) === 'process') {
             $fehler = 'Bitte Quell- und Zielrennen auswählen.';
         } elseif ($quelle === $ziel) {
             $fehler = 'Quelle und Ziel müssen unterschiedliche Rennen sein.';
-        // zukuenftigeRennen prüft, ob das Zielrennen noch nicht vorbei ist.
+        // zukünftigeRennen prüft, ob das Zielrennen noch nicht vorbei ist.
         } elseif (!zukuenftigeRennen($connection, $ziel)) {
             $fehler = 'Das Zielrennen muss ein zukünftiges Rennen sein.';
         } else {
