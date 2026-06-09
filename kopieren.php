@@ -10,7 +10,9 @@ if (!defined('TEAMCHEF_DASHBOARD')) {
     exit;
 }
 
+// In der Process-Phase werden Kopieraktionen verarbeitet und Auswahllisten geladen.
 if (($dashboardPhase) === 'process') {
+    // Verarbeitet das Formular zum Kopieren von Anmeldungen zwischen zwei Rennen.
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'kopieren_speichern') {
         // post_value liest das Formularfeld und filter_var prüft auf eine ganze Zahl.
         $quelle = filter_var(post_value('kopieren_quelle'), FILTER_VALIDATE_INT);
@@ -94,6 +96,7 @@ if (($dashboardPhase) === 'process') {
     }
 }
 
+// In der Render-Phase wird das Formular für Quelle und Zielrennen angezeigt.
 if (($dashboardPhase) === 'render') {
 ?>
 <hr>

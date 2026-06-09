@@ -4,18 +4,23 @@
  * Dashboard-Rahmen für Teamchefs. Die einzelnen Aufgabenbereiche werden eingebunden.
  */
 session_start();
+
+// Zentrale Abhängigkeiten für Datenbank, Hilfsfunktionen und Trainingsauswertung laden.
 require 'db.php';
 require 'functions.php';
 require_once 'TrainingStats.php';
 
+// Zugriff nur erlauben, wenn der eingeloggte Benutzer die Rolle Teamchef hat.
 require_role('teamchef');
 
+// Team und Meldungsvariablen werden von den eingebundenen Modulen gemeinsam genutzt.
 $teamRaw = (string) ($_SESSION['team'] ?? '');
 $team = $teamRaw;
 $meldung = '';
 $fehler = '';
 $taskAction = post_value('task_action');
 
+// Konstante verhindert, dass Dashboard-Module direkt im Browser aufgerufen werden.
 define('TEAMCHEF_DASHBOARD', true);
 $teamchefModuleFiles = array(
     'fahrer' => 'fahrer.php',
@@ -25,6 +30,7 @@ $teamchefModuleFiles = array(
     'auswertung' => 'auswertung.php',
 );
 
+// In der Process-Phase verarbeiten die Module Formularaktionen und laden Daten.
 $dashboardPhase = 'process';
 foreach ($teamchefModuleFiles as $moduleFile) {
     include $moduleFile;
@@ -46,6 +52,7 @@ foreach ($teamchefModuleFiles as $moduleFile) {
 <?php } ?>
 
 <?php
+// In der Render-Phase geben dieselben Module ihre HTML-Bereiche aus.
 $dashboardPhase = 'render';
 foreach ($teamchefModuleFiles as $moduleFile) {
     include $moduleFile;

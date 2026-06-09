@@ -3,17 +3,20 @@
  * Autor: Felix Straßer
  * Registrierungs-Baustein für Team und Teamchef.
  */
+// Das Registrierungsmodul darf nur von der Startseite eingebunden werden.
 if (!defined('INDEX_PAGE')) {
     header('Location: index.php');
     exit;
 }
 
+// Werte nur auslesen, wenn wirklich das Teamchef-Registrierungsformular abgeschickt wurde.
 $istTeamchefReg = ($_POST['form_typ'] ?? '') === 'teamchef_reg';
 $teamchefRegTeam = $istTeamchefReg ? post_value('teamname') : '';
 $teamchefRegLoginname = $istTeamchefReg ? post_value('loginname') : '';
 $teamchefRegName = $istTeamchefReg ? post_value('name') : '';
 $teamchefRegVorname = $istTeamchefReg ? post_value('vorname') : '';
 
+// Formular prüfen und bei gültigen Daten Team plus Teamchef anlegen.
 if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' && $istTeamchefReg) {
     $kennwort = post_value('kennwort');
     $werte = array($teamchefRegTeam, $teamchefRegLoginname, $teamchefRegName, $teamchefRegVorname, $kennwort);
@@ -27,6 +30,7 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
     } elseif (!teamMitTeamchefErstellen($connection, $teamchefRegTeam, $teamchefRegLoginname, $teamchefRegName, $teamchefRegVorname, $kennwort)) {
         $teamchefRegFehler = 'Registrierung konnte nicht gespeichert werden: ' . mysqli_error($connection);
     } else {
+        // Direkt nach erfolgreicher Registrierung als Teamchef einloggen.
         $_SESSION['rolle'] = 'teamchef';
         $_SESSION['loginname'] = $teamchefRegLoginname;
         $_SESSION['team'] = $teamchefRegTeam;
@@ -35,6 +39,7 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
     }
 }
 
+// In der Render-Phase wird das Registrierungsformular ausgegeben.
 if (($indexPhase ?? '') === 'render') {
 $felder = array(
     array('reg_team', 'teamname', 'Teamname', $teamchefRegTeam),

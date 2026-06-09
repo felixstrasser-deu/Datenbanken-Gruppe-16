@@ -33,6 +33,7 @@ function require_role($role)
 /*Felix Straßer*/
 function teamExistiert($connection, $teamname)
 {
+    // Prueft, ob ein Teamname bereits in der Datenbank vorhanden ist.
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Team WHERE Teamname = ? LIMIT 1');
     if (!$stmt) {
         return false;
@@ -50,6 +51,7 @@ function teamExistiert($connection, $teamname)
 /*Felix Straßer*/
 function loginnameExistiert($connection, $loginname)
 {
+    // Prueft, ob ein Loginname bereits von einem Teamchef verwendet wird.
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Teamchef WHERE Loginname = ? LIMIT 1');
     if (!$stmt) {
         return false;
@@ -67,6 +69,7 @@ function loginnameExistiert($connection, $loginname)
 /*Felix Straßer*/
 function teamMitTeamchefErstellen($connection, $teamname, $loginname, $name, $vorname, $kennwort)
 {
+    // Team und Teamchef gehören zusammen und werden deshalb in einer Transaktion gespeichert.
     mysqli_begin_transaction($connection);
 
     $teamStmt = mysqli_prepare($connection, 'INSERT INTO Team (Teamname) VALUES (?)');
@@ -84,6 +87,7 @@ function teamMitTeamchefErstellen($connection, $teamname, $loginname, $name, $vo
         return false;
     }
 
+    // Passwörter werden nie im Klartext gespeichert, sondern vorher gehasht.
     $hash = password_hash($kennwort, PASSWORD_DEFAULT);
     $chefStmt = mysqli_prepare($connection, 'INSERT INTO Teamchef (Loginname, Name, Vorname, Kennwort, Team) VALUES (?, ?, ?, ?, ?)');
     if (!$chefStmt) {
@@ -107,6 +111,7 @@ function teamMitTeamchefErstellen($connection, $teamname, $loginname, $name, $vo
 /*Felix Straßer*/
 function fahrerSpeichern($connection, $mode, $team, $mitarbeiterId, $name, $strasse, $hausnr, $plz, $ort, $telnr)
 {
+    // Die Stored Procedure entscheidet anhand des Modus, ob ein Fahrer angelegt oder aktualisiert wird.
     $sql = 'CALL FahrerSpeichern(?, ?, ?, ?, ?, ?, ?, ?, ?, @fahrer_status, @fahrer_meldung)';
     $stmt = mysqli_prepare($connection, $sql);
     if (!$stmt) {
@@ -118,6 +123,7 @@ function fahrerSpeichern($connection, $mode, $team, $mitarbeiterId, $name, $stra
     $error = mysqli_error($connection);
     mysqli_stmt_close($stmt);
 
+    // Nach CALL müssen mögliche Rest-Ergebnisse abgearbeitet werden, bevor SELECT wieder genutzt wird.
     while (mysqli_more_results($connection)) {
         mysqli_next_result($connection);
     }
@@ -126,6 +132,7 @@ function fahrerSpeichern($connection, $mode, $team, $mitarbeiterId, $name, $stra
         return array(false, 'Stored Procedure FahrerSpeichern konnte nicht ausgeführt werden: ' . $error);
     }
 
+    // Status und Meldung der Stored Procedure werden aus Ausgabevariablen gelesen.
     $result = mysqli_query($connection, 'SELECT @fahrer_status AS status, @fahrer_meldung AS meldung');
     if (!$result || !($row = mysqli_fetch_assoc($result))) {
         return array(false, 'Rückmeldung der Stored Procedure konnte nicht gelesen werden.');

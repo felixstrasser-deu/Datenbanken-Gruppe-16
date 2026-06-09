@@ -3,11 +3,13 @@
  * Autor: Felix Straßer
  * Include-Modul für Fahrer anlegen, ändern, löschen und anzeigen.
  */
+// Schutz vor direktem Aufruf: Das Modul darf nur über das Teamchef-Dashboard laufen.
 if (!defined('TEAMCHEF_DASHBOARD')) {
     header('Location: teamchef_dashboard.php');
     exit;
 }
 
+// In der Process-Phase werden Formularaktionen verarbeitet und Fahrerdaten geladen.
 if (($dashboardPhase) === 'process') {
     $meldungen = array('created' => 'Fahrer wurde angelegt.', 'updated' => 'Fahrer wurde aktualisiert.', 'deleted' => 'Fahrer wurde gelöscht.');
     $fehlertexte = array('exists' => 'Mitarbeiter-ID ist bereits vergeben.', 'notfound' => 'Fahrer wurde nicht gefunden.', 'error' => 'Aktion konnte nicht ausgeführt werden.');
@@ -23,9 +25,11 @@ if (($dashboardPhase) === 'process') {
     $felder = array('mitarbeiter_id', 'name', 'strasse', 'hausnr', 'plz', 'ort', 'telnr');
     $form = array_fill_keys($felder, '');
 
+    // POST-Anfragen kommen vom Fahrerformular oder vom Löschen-Button.
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = post_value('fahrer_action');
 
+        // Löscht einen Fahrer nur aus dem aktuell angemeldeten Team.
         if ($action === 'delete') {
             $deleteId = filter_var(post_value('delete_mitarbeiter_id'), FILTER_VALIDATE_INT);
             $deleteStmt = $deleteId > 0 ? mysqli_prepare($connection, 'DELETE FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ?') : false;
@@ -43,12 +47,14 @@ if (($dashboardPhase) === 'process') {
             exit;
         }
 
+        // Speichert neue Fahrer oder aktualisiert bestehende Fahrer.
         if ($action === 'save') {
             $formMode = post_value('form_mode') === 'edit' ? 'edit' : 'create';
             foreach ($felder as $feld) {
                 $form[$feld] = post_value($feld);
             }
 
+            // Pflichtfelder und einfache Plausibilität prüfen, bevor gespeichert wird.
             $errors = array();
             foreach (array('name', 'strasse', 'hausnr', 'plz', 'ort', 'telnr') as $feld) {
                 if ($form[$feld] === '') {
@@ -62,6 +68,7 @@ if (($dashboardPhase) === 'process') {
                 $errors[] = 'PLZ muss aus maximal 5 Ziffern bestehen.';
             }
 
+            // Im Bearbeiten-Modus bleibt die ursprüngliche Mitarbeiter-ID maßgeblich.
             $mitarbeiterIdRaw = $formMode === 'edit' ? post_value('original_mitarbeiter_id') : $form['mitarbeiter_id'];
             $mitarbeiterId = filter_var($mitarbeiterIdRaw, FILTER_VALIDATE_INT);
             if ($mitarbeiterId === false || $mitarbeiterId <= 0) {
@@ -72,6 +79,7 @@ if (($dashboardPhase) === 'process') {
             }
 
             if (count($errors) === 0) {
+                // Die eigentliche Insert-/Update-Logik liegt in der gemeinsamen Hilfsfunktion.
                 list($ok, $message) = fahrerSpeichern($connection, $formMode, $team, $mitarbeiterId, $form['name'], $form['strasse'], $form['hausnr'], $form['plz'], $form['ort'], $form['telnr']);
                 if ($ok || $message === 'Mitarbeiter-ID ist bereits vergeben.') {
                     $status = $ok ? ($formMode === 'create' ? 'created' : 'updated') : 'exists';
@@ -85,6 +93,7 @@ if (($dashboardPhase) === 'process') {
         }
     }
 
+    // Wird eine edit-ID übergeben, werden die vorhandenen Daten ins Formular geladen.
     $editId = filter_var(get_value('edit'), FILTER_VALIDATE_INT);
     if ($editId !== false && $editId > 0 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         $editStmt = mysqli_prepare($connection, 'SELECT `Mitarbeiter_ID`, `Name`, `Strasse`, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Mitarbeiter_ID` = ? AND `Team` = ? LIMIT 1');
@@ -102,6 +111,7 @@ if (($dashboardPhase) === 'process') {
         }
     }
 
+    // Alle Fahrer des eingeloggten Teams für die Tabellenanzeige laden.
     $fahrer = array();
     $fahrerStmt = mysqli_prepare($connection, 'SELECT `Mitarbeiter_ID`, `Name`, `Strasse`, `HausNr`, `PLZ`, `Ort`, `TelNr` FROM Fahrer WHERE `Team` = ? ORDER BY `Name`');
     if ($fahrerStmt) {
@@ -115,6 +125,7 @@ if (($dashboardPhase) === 'process') {
     }
 }
 
+// In der Render-Phase werden Formular und Fahrerliste ausgegeben.
 if (($dashboardPhase) === 'render') {
 $inputs = array(
     'mitarbeiter_id' => array('Mitarbeiter-ID', 'number', '1', ''),
