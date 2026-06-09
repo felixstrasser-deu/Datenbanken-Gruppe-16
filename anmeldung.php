@@ -5,14 +5,16 @@
  */
 
 // Schutz vor direktem Aufruf: Das Modul darf nur über das Teamchef-Dashboard geladen werden.
-if (!defined('TEAMCHEF_DASHBOARD')) {
+if (!defined('TEAMCHEF_DASHBOARD')) 
+{
     header('Location: teamchef_dashboard.php');
     exit;
 }
 
 if (($dashboardPhase) === 'process') {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'anmeldung_speichern') {
-        // post_value liest den Formularwert und filter_var prüft, ob es eine ganze Zahl ist.
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $taskAction === 'anmeldung_speichern') 
+        {
+        // post_value liest den Formularwert und filter_var prueft, ob es eine ganze Zahl ist.
         $rennenId = filter_var(post_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
         // Falls keine Fahrer gesendet wurden, wird ein leeres Array verwendet.
         $fahrerIds = $_POST['anmeldung_fahrer'] ?? array();
@@ -21,6 +23,7 @@ if (($dashboardPhase) === 'process') {
 
         if ($rennenId === false || $rennenId <= 0) {
             $fehler = 'Bitte ein gültiges Rennen auswählen.';
+        // zukünftigeRennen prüft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
         // zukünftigeRennen prüft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
         } elseif (!zukuenftigeRennen($connection, $rennenId)) {
             $fehler = 'Bitte ein zukünftiges Rennen auswählen.';
@@ -50,8 +53,10 @@ if (($dashboardPhase) === 'process') {
 
     // fahrerZuTeam liefert nur die Fahrer des angemeldeten Teams.
     $anmeldungFahrer = fahrerZuTeam($connection, $team);
+
     // listeRennen liefert hier nur zukünftige Rennen, weil true übergeben wird.
     $anmeldungRennen = listeRennen($connection, true);
+
     // get_value liest die Werte aus der URL, filter_var prüft wieder auf ganze Zahlen.
     $anmeldungRennenId = filter_var(get_value('anmeldung_rennen_id'), FILTER_VALIDATE_INT);
     $anmeldungAnzahl = filter_var(get_value('anmeldung_anzahl'), FILTER_VALIDATE_INT);
