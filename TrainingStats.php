@@ -23,24 +23,6 @@ class TrainingStats
         $this->bis = $bis;
     }
 
-    // Setzt die Fahrer-ID, für die Trainingsdaten ausgewertet werden sollen.
-    public function setFahrerId($fahrerId) { $this->fahrerId = $fahrerId; }
-
-    // Gibt die aktuell gesetzte Fahrer-ID zurück.
-    public function getFahrerId() { return $this->fahrerId; }
-
-    // Setzt ein optionales Trainingsziel, nach dem die Trainingsdaten gefiltert werden.
-    public function setTrainingsziel($trainingsziel) { $this->trainingsziel = $trainingsziel; }
-
-    // Gibt das aktuell gesetzte Trainingsziel zurück.
-    public function getTrainingsziel() { return $this->trainingsziel; }
-
-    // Setzt den optionalen Auswertungszeitraum mit Start- und Enddatum.
-    public function setZeitraum($von, $bis) { $this->von = $von; $this->bis = $bis; }
-
-    // Gibt die geladenen Kilometer-Rohwerte gruppiert nach Monat zurück.
-    public function getMonatswerte() { return $this->monatswerte; }
-
     // Lädt die Trainingsdaten des gewählten Fahrers, gruppiert sie nach Monat und berechnet anschließend die Monatsstatistik.
     public function loadFromDatabase($connection, $team)
     {
@@ -140,14 +122,8 @@ class TrainingStats
         return $this->monatsStatistik;
     }
 
-    // Gibt die gespeicherte Statistik für einen bestimmten Monat zurück.
-    public function getMonatswert($monat)
-    {
-        return isset($this->monatsStatistik[$monat]) ? $this->monatsStatistik[$monat] : null;
-    }
-
     // Berechnet ein Quantil, zum Beispiel den Median oder das 25%- bzw. 75%-Quantil.
-    public function quantil($werte, $q)
+    private function quantil($werte, $q)
     {
         sort($werte, SORT_NUMERIC);
         $position = (count($werte) - 1) * $q;
@@ -162,7 +138,7 @@ class TrainingStats
     }
 
     // Berechnet die Standardabweichung der Kilometerwerte als Maß für die Streuung.
-    public function standardabweichung($werte)
+    private function standardabweichung($werte)
     {
         $durchschnitt = array_sum($werte) / count($werte);
         $summe = 0.0;
