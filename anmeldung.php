@@ -24,7 +24,6 @@ if (($dashboardPhase) === 'process') {
         if ($rennenId === false || $rennenId <= 0) {
             $fehler = 'Bitte ein gültiges Rennen auswählen.';
         // zukünftigeRennen prüft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
-        // zukünftigeRennen prüft, ob die Renn-ID zu einem zukünftigen Rennen gehört.
         } elseif (!zukuenftigeRennen($connection, $rennenId)) {
             $fehler = 'Bitte ein zukünftiges Rennen auswählen.';
         } else {
