@@ -63,12 +63,12 @@ if (($dashboardPhase) === 'process') {
             foreach ($auswertungFahrerListe as $fahrerEintrag) {
                 $stats = new TrainingStats((int) $fahrerEintrag['Mitarbeiter_ID'], $auswertungZiel, $auswertungVon, $auswertungBis);
 
-                // Berechnete Monatsstatistik zusammen mit den Fahrerdaten für die Ausgabe speichern.
                 if (!$stats->loadFromDatabase($connection, $teamRaw)) {
                     $fehler = 'Auswertung konnte nicht geladen werden.';
                     break;
                 }
 
+                // Berechnete Monatsstatistik zusammen mit den Fahrerdaten für die Ausgabe speichern.
                 $auswertungStatistiken[] = array(
                     'fahrer' => $fahrerEintrag,
                     'monate' => $stats->getMonatsStatistik(),
