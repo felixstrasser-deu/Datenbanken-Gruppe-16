@@ -41,6 +41,7 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
 
 // In der Render-Phase wird das Registrierungsformular ausgegeben.
 if (($indexPhase ?? '') === 'render') {
+// Felddefinitionen für die Textfelder im Registrierungsformular.
 $felder = array(
     array('reg_team', 'teamname', 'Teamname', $teamchefRegTeam),
     array('reg_loginname', 'loginname', 'Loginname', $teamchefRegLoginname),
@@ -49,18 +50,22 @@ $felder = array(
 );
 ?>
 <?php if ($teamchefRegFehler !== '') { ?>
+    <!-- Fehlermeldung aus der Registrierungsprüfung anzeigen. -->
     <p><strong><?php echo e($teamchefRegFehler); ?></strong></p>
 <?php } ?>
 
+<!-- Formular zum Anlegen eines Teams und des zugehörigen Teamchef-Logins. -->
 <form method="post" action="index.php">
     <input type="hidden" name="form_typ" value="teamchef_reg">
 
     <?php foreach ($felder as $feld) { ?>
+        <!-- Die Textfelder werden aus dem Array oben erzeugt, damit die Ausgabe nicht viermal wiederholt wird. -->
         <label for="<?php echo e($feld[0]); ?>"><?php echo e($feld[2]); ?>:</label><br>
         <input type="text" name="<?php echo e($feld[1]); ?>" id="<?php echo e($feld[0]); ?>" maxlength="50" value="<?php echo e($feld[3]); ?>" required>
         <br><br>
     <?php } ?>
 
+    <!-- Passwort wird später vor dem Speichern gehasht. -->
     <label for="reg_passwort">Passwort:</label><br>
     <input type="password" name="kennwort" id="reg_passwort" required>
     <br><br>

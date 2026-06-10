@@ -127,6 +127,7 @@ if (($dashboardPhase) === 'process') {
 
 // In der Render-Phase werden Formular und Fahrerliste ausgegeben.
 if (($dashboardPhase) === 'render') {
+// Felddefinitionen für das Fahrerformular: Label, Input-Typ, Minimum und maximale Länge.
 $inputs = array(
     'mitarbeiter_id' => array('Mitarbeiter-ID', 'number', '1', ''),
     'name' => array('Name', 'text', '', '50'),
@@ -138,6 +139,7 @@ $inputs = array(
 );
 ?>
 <h3 id="fahrerformular">Fahrer anlegen / bearbeiten</h3>
+<!-- Das Formular nutzt denselben Bereich für Anlegen und Bearbeiten; form_mode unterscheidet den Modus. -->
 <form method="post" action="teamchef_dashboard.php#fahrerformular">
     <input type="hidden" name="bereich" value="fahrer">
     <input type="hidden" name="fahrer_action" value="save">
@@ -145,6 +147,7 @@ $inputs = array(
     <input type="hidden" name="original_mitarbeiter_id" value="<?php echo e($form['mitarbeiter_id']); ?>">
 
     <?php foreach ($inputs as $name => $daten) { ?>
+        <!-- Jedes Eingabefeld wird aus der Felddefinition oben aufgebaut. -->
         <label for="<?php echo e($name); ?>"><?php echo e($daten[0]); ?>:</label><br>
         <input type="<?php echo e($daten[1]); ?>" id="<?php echo e($name); ?>" name="<?php echo e($name); ?>"
                value="<?php echo e($form[$name]); ?>"
@@ -162,13 +165,16 @@ $inputs = array(
 
 <h3 id="fahrerliste">Fahrer im Team</h3>
 <?php if (count($fahrer) === 0) { ?>
+    <!-- Wenn keine Datensätze geladen wurden, wird statt einer leeren Tabelle ein Hinweis angezeigt. -->
     <p>Es sind noch keine Fahrer für dieses Team angelegt.</p>
 <?php } else { ?>
+    <!-- Tabelle mit allen Fahrern des aktuell eingeloggten Teams. -->
     <table border="1" cellpadding="5" cellspacing="0">
         <tr>
             <th>Mitarbeiter-ID</th><th>Name</th><th>Straße</th><th>Hausnummer</th><th>PLZ</th><th>Ort</th><th>Telefon</th><th>Aktionen</th>
         </tr>
         <?php foreach ($fahrer as $eintrag) { ?>
+            <!-- Eine Tabellenzeile entspricht genau einem Fahrer-Datensatz. -->
             <tr>
                 <td><?php echo e($eintrag['Mitarbeiter_ID']); ?></td>
                 <td><?php echo e($eintrag['Name']); ?></td>
@@ -178,7 +184,9 @@ $inputs = array(
                 <td><?php echo e($eintrag['Ort']); ?></td>
                 <td><?php echo e($eintrag['TelNr']); ?></td>
                 <td>
+                    <!-- Bearbeiten lädt den Fahrer erneut und füllt das Formular oben vor. -->
                     <a href="teamchef_dashboard.php?bereich=fahrer&edit=<?php echo urlencode((string) $eintrag['Mitarbeiter_ID']); ?>">Bearbeiten</a>
+                    <!-- Löschen wird als POST-Formular gesendet, damit keine Löschung nur durch einen Link passiert. -->
                     <form method="post" action="teamchef_dashboard.php#fahrerformular" style="display:inline;">
                         <input type="hidden" name="bereich" value="fahrer">
                         <input type="hidden" name="fahrer_action" value="delete">

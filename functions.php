@@ -62,7 +62,7 @@ function teamExistiert($connection, $teamname)
 // Prüft, ob ein Loginname bereits von einem Teamchef benutzt wird.
 function loginnameExistiert($connection, $loginname)
 {
-    // Prueft, ob ein Loginname bereits von einem Teamchef verwendet wird.
+    // Prüft, ob ein Loginname bereits von einem Teamchef verwendet wird.
     $stmt = mysqli_prepare($connection, 'SELECT 1 FROM Teamchef WHERE Loginname = ? LIMIT 1');
     if (!$stmt) {
         return false;

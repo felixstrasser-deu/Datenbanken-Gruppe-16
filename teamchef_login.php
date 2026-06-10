@@ -55,17 +55,21 @@ if (($indexPhase ?? '') === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST' &
 if (($indexPhase ?? '') === 'render') {
 ?>
 <?php if ($teamchefLoginFehler !== '') { ?>
+    <!-- Fehlermeldung aus der Login-Prüfung anzeigen. -->
     <p><strong><?php echo e($teamchefLoginFehler); ?></strong></p>
 <?php } ?>
 
+<!-- Formular für den Teamchef-Login; form_typ ordnet den POST der richtigen Verarbeitung zu. -->
 <form method="post" action="index.php">
     <input type="hidden" name="form_typ" value="teamchef_login">
 
+    <!-- Eingabefeld für den Loginname des Teamchefs. -->
     <label for="teamchef_login">Loginname:</label><br>
     <input type="text" name="loginname" id="teamchef_login" required>
 
     <br><br>
 
+    <!-- Passwortfeld bleibt im Browser verdeckt. -->
     <label for="teamchef_passwort">Passwort:</label><br>
     <input type="password" name="kennwort" id="teamchef_passwort" required>
 

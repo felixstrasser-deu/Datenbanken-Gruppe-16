@@ -101,10 +101,12 @@ if (($dashboardPhase) === 'render') {
 ?>
 <hr>
 <h3 id="kopieren">Anmeldungen kopieren</h3>
+<!-- Formular zum Kopieren vorhandener Anmeldungen von einem Rennen auf ein anderes. -->
 <form method="post" action="teamchef_dashboard.php#kopieren">
     <input type="hidden" name="bereich" value="kopieren">
     <input type="hidden" name="task_action" value="kopieren_speichern">
 
+    <!-- Quellrennen: aus diesem Rennen werden die bestehenden Anmeldungen gelesen. -->
     <label for="kopieren_quelle">Anmeldungen aus Rennen:</label><br>
     <select name="kopieren_quelle" id="kopieren_quelle" required>
         <option value="">Bitte wählen</option>
@@ -118,9 +120,11 @@ if (($dashboardPhase) === 'render') {
     <br><br>
 
     <label for="kopieren_ziel">Kopieren nach zukünftigem Rennen:</label><br>
+    <!-- Zielrennen: hier sind nur heutige und zukünftige Rennen auswählbar. -->
     <select name="kopieren_ziel" id="kopieren_ziel" required>
         <option value="">Bitte wählen</option>
         <?php foreach ($kopierenZielRennen as $rennenEintrag) { ?>
+            <!-- Jede Option enthält ID, Datum und Standort zur eindeutigen Auswahl. -->
             <option value="<?php echo e($rennenEintrag['Renn_ID']); ?>">
                 <?php echo e($rennenEintrag['Renn_ID'] . ' - ' . $rennenEintrag['Datum'] . ' - ' . $rennenEintrag['Standort']); ?>
             </option>

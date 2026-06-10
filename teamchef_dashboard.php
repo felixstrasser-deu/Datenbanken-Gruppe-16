@@ -45,6 +45,7 @@ foreach ($teamchefModuleFiles as $moduleFile) {
 <body>
 <h1>Teamchef Dashboard</h1>
 
+<!-- Meldungen und Fehler aus der Process-Phase werden vor den Modulinhalten angezeigt. -->
 <?php foreach (array($meldung, $fehler) as $hinweis) { ?>
     <?php if ($hinweis !== '') { ?>
         <p><strong><?php echo e($hinweis); ?></strong></p>
@@ -55,6 +56,7 @@ foreach ($teamchefModuleFiles as $moduleFile) {
 // In der Render-Phase geben dieselben Module ihre HTML-Bereiche aus.
 $dashboardPhase = 'render';
 foreach ($teamchefModuleFiles as $moduleFile) {
+    // Jedes Modul prüft selbst, ob es in der Render-Phase HTML ausgeben soll.
     include $moduleFile;
 }
 ?>
